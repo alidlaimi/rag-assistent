@@ -1,0 +1,3 @@
+# Einheitliche Zeilenenden (LF), damit Skripte auch in Linux-Containern und CI laufen
+* text=auto eol=lf
+*.pdf binary

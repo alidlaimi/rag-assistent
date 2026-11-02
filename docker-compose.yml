@@ -1,0 +1,24 @@
+services:
+  db:
+    # Offizielles PostgreSQL-Image mit vorinstallierter pgvector-Erweiterung
+    image: pgvector/pgvector:pg17
+    container_name: rag-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      # Daten überleben einen Neustart des Containers
+      - pgdata:/var/lib/postgresql/data
+      # Wird nur beim allerersten Start (leeres Volume) ausgeführt
+      - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:

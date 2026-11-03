@@ -12,6 +12,10 @@ license = { text = "MIT" }
 dependencies = [
   "psycopg[binary]>=3.2",
   "python-dotenv>=1.0",
+  "pypdf>=5.0",
+  "numpy>=1.26",
+  "pgvector>=0.3",
+  "sentence-transformers>=3.0",
 ]
 
 [project.optional-dependencies]

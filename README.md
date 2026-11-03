@@ -22,7 +22,7 @@ Assistent das, statt zu raten.
 | # | Meilenstein | Status |
 |---|---|---|
 | 1 | Repository, Konfiguration, PostgreSQL/pgvector per Docker | ✅ |
-| 2 | Dokumente einlesen, chunken, Embeddings speichern | ⏳ |
+| 2 | Dokumente einlesen, chunken, Embeddings speichern | ✅ |
 | 3 | Suche + Antwort mit Quellenangabe | ⏳ |
 | 4 | Agent-Werkzeuge (Tool-Calling) | ⏳ |
 | 5 | FastAPI + Streamlit-Chat | ⏳ |
@@ -47,8 +47,31 @@ py -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -e ".[dev]"
 python scripts/check_setup.py   # prüft Konfiguration und Datenbank
+python scripts/download_docs.py # lädt die PDFs gemäss data/sources.csv
+python scripts/ingest.py        # chunkt, berechnet Embeddings, speichert in pgvector
 pytest
 ```
+
+## Datenquellen
+
+13 öffentlich zugängliche Dokumente der Zürcher Hochschule der Künste (ZHdK) und des
+Kantons Zürich – Reglemente, Studienordnungen, Merkblätter, Gesetz und Verordnung.
+Die vollständige Liste mit Herausgeber, Stand und URL steht in
+[`data/sources.csv`](data/sources.csv).
+
+Die PDFs liegen bewusst **nicht** im Repository: Die Rechte bleiben bei den Herausgebern,
+und `scripts/download_docs.py` lädt den Bestand reproduzierbar herunter. Dabei prüft das
+Skript, ob jedes PDF eine Textebene hat (eingescannte Dokumente würden sonst unbemerkt
+leere Suchergebnisse liefern).
+
+## Einlese-Pipeline
+
+| Schritt | Umsetzung | Begründung |
+|---|---|---|
+| PDF lesen | `pypdf`, seitenweise | Jede Antwort soll Dokument **und Seite** nennen können |
+| Chunking | max. 1000 Zeichen, 200 Zeichen Überlappung, nie über Seitengrenzen | Präzise Treffer, exakte Seitenangabe |
+| Embeddings | `intfloat/multilingual-e5-small` (384 Dimensionen), lokal | Versteht Deutsch, läuft auf CPU, keine Daten an Dritte |
+| Speicherung | PostgreSQL + pgvector, HNSW-Index (Kosinus) | Vektorsuche und normale SQL-Daten in einer Datenbank |
 
 ## Projektstruktur
 

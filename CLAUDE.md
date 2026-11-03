@@ -32,6 +32,7 @@ FastAPI, Streamlit, pytest, Docker / docker-compose, GitHub Actions.
 - Windows, PowerShell, VS Code.
 - Virtuelle Umgebung: `.venv` (aktivieren mit `.\.venv\Scripts\Activate.ps1`).
 - Datenbank: `docker compose up -d`; Prüfung: `python scripts/check_setup.py`.
+- Dokumente laden: `python scripts/download_docs.py`; einlesen: `python scripts/ingest.py`.
 - Tests: `pytest` – müssen vor jedem Commit grün sein.
 
 ## Projektstruktur

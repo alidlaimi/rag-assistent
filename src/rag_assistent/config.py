@@ -12,6 +12,11 @@ from dotenv import load_dotenv
 # (wichtig für Docker und CI, wo Werte von aussen kommen).
 load_dotenv()
 
+# Embedding-Modell: mehrsprachig (inkl. Deutsch), klein genug für CPU.
+# Die Dimension muss zur Spalte vector(384) in der Datenbank passen.
+EMBEDDING_MODEL = "intfloat/multilingual-e5-small"
+EMBEDDING_DIM = 384
+
 
 @dataclass(frozen=True)
 class Settings:

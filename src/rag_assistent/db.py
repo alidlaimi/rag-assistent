@@ -1,7 +1,35 @@
 """Datenbankzugriff (PostgreSQL + pgvector)."""
 import psycopg
 
-from rag_assistent.config import get_settings
+from rag_assistent.config import EMBEDDING_DIM, get_settings
+
+SCHEMA = f"""
+CREATE EXTENSION IF NOT EXISTS vector;
+
+CREATE TABLE IF NOT EXISTS documents (
+    id            SERIAL PRIMARY KEY,
+    source_id     TEXT UNIQUE NOT NULL,
+    titel         TEXT NOT NULL,
+    herausgeber   TEXT NOT NULL,
+    stand         TEXT,
+    url           TEXT NOT NULL,
+    seiten        INTEGER NOT NULL,
+    eingelesen_am TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS chunks (
+    id          SERIAL PRIMARY KEY,
+    document_id INTEGER NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    seite       INTEGER NOT NULL,
+    chunk_index INTEGER NOT NULL,
+    text        TEXT NOT NULL,
+    embedding   vector({EMBEDDING_DIM}) NOT NULL
+);
+
+-- HNSW-Index: schnelle Näherungssuche nach Kosinus-Ähnlichkeit
+CREATE INDEX IF NOT EXISTS chunks_embedding_idx
+    ON chunks USING hnsw (embedding vector_cosine_ops);
+"""
 
 
 def get_connection() -> psycopg.Connection:
@@ -10,9 +38,6 @@ def get_connection() -> psycopg.Connection:
 
 
 def init_schema() -> None:
-    """Legt Erweiterung und Tabellen an, falls sie fehlen (idempotent).
-
-    Wird in jedem Meilenstein erweitert; IF NOT EXISTS macht mehrfaches Ausführen ungefährlich.
-    """
+    """Legt Erweiterung, Tabellen und Index an, falls sie fehlen (idempotent)."""
     with get_connection() as conn:
-        conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
+        conn.execute(SCHEMA)

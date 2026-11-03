@@ -15,7 +15,12 @@ from rag_assistent.config import EMBEDDING_MODEL
 def _model():
     # Import erst hier: Das Laden dauert einige Sekunden und wird nur einmal gemacht.
     from sentence_transformers import SentenceTransformer
-    return SentenceTransformer(EMBEDDING_MODEL)
+    try:
+        # Zuerst aus dem lokalen Zwischenspeicher – ohne Netzwerkzugriff auf Hugging Face
+        return SentenceTransformer(EMBEDDING_MODEL, local_files_only=True)
+    except Exception:
+        # Beim allerersten Mal: Modell herunterladen
+        return SentenceTransformer(EMBEDDING_MODEL)
 
 
 def embed_passages(texts: list[str]) -> np.ndarray:

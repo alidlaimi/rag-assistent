@@ -16,3 +16,6 @@ data/raw/*
 .vscode/
 Thumbs.db
 .DS_Store
+
+# Lokale Testprotokolle
+kalibrierung*.txt

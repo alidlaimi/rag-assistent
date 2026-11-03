@@ -23,7 +23,7 @@ Assistent das, statt zu raten.
 |---|---|---|
 | 1 | Repository, Konfiguration, PostgreSQL/pgvector per Docker | ✅ |
 | 2 | Dokumente einlesen, chunken, Embeddings speichern | ✅ |
-| 3 | Suche + Antwort mit Quellenangabe | ⏳ |
+| 3 | Suche + Antwort mit Quellenangabe | ✅ |
 | 4 | Agent-Werkzeuge (Tool-Calling) | ⏳ |
 | 5 | FastAPI + Streamlit-Chat | ⏳ |
 | 6 | Testset + Auswertung | ⏳ |
@@ -31,6 +31,27 @@ Assistent das, statt zu raten.
 | 8 | Leitplanken Datenschutz | ⏳ |
 | 9 | GitHub Actions (Tests, Docker-Image) | ⏳ |
 | 10 | Dokumentation | ⏳ |
+
+## Suche und Antwort
+
+```
+Frage ─┬─ Vektorsuche (Bedeutung, pgvector/HNSW) ──┐
+       └─ Volltextsuche (Stichwörter, PostgreSQL) ─┴─ Reciprocal Rank Fusion
+                                                       │  max. 3 Treffer pro Dokument, Top 6
+                                  bester Treffer < 0.84? ──► "keine Angaben" (kein Modellaufruf)
+                                                       │
+                                     Claude mit nummerierten Auszügen [1]…[6]
+                                                       │
+                                     Antwort mit Zitaten → Prüfung der Zitate
+```
+
+| Entscheid | Begründung |
+|---|---|
+| Hybride Suche statt nur Vektoren | Das Embedding-Modell übersah Abschnitte mit exakten Begriffen („höchstens 10 Semester“); die Volltextsuche findet sie |
+| Max. 3 Treffer pro Dokument | Die Steuer-Wegleitung stellt 54 % aller Abschnitte und würde sonst den Kontext füllen |
+| Schwelle 0.84 vor dem Modellaufruf | Kalibriert mit Fragen innerhalb (0.88–0.90) und ausserhalb (0.79–0.80) der Dokumente; fremde Fragen kosten nichts |
+| Nummerierte Auszüge, Zitate werden geprüft | Jede Aussage ist überprüfbar; Zitate ohne passenden Auszug werden als Warnung gemeldet |
+| Regel „aus Fehlen nichts schliessen“ | Ein Test zeigte, dass das Modell aus unvollständigen Auszügen auf eine fehlende Regel schloss |
 
 ## Architektur
 
@@ -49,6 +70,7 @@ pip install -e ".[dev]"
 python scripts/check_setup.py   # prüft Konfiguration und Datenbank
 python scripts/download_docs.py # lädt die PDFs gemäss data/sources.csv
 python scripts/ingest.py        # chunkt, berechnet Embeddings, speichert in pgvector
+python scripts/ask.py "Innert welcher Frist kann ich Rekurs einlegen?"
 pytest
 ```
 

@@ -17,6 +17,14 @@ load_dotenv()
 EMBEDDING_MODEL = "intfloat/multilingual-e5-small"
 EMBEDDING_DIM = 384
 
+# Suche (Retrieval) – hybrid: Bedeutung (Vektor) + Stichwörter (Volltext)
+TOP_K = 6               # so viele Abschnitte bekommt das Modell als Kontext
+MAX_PRO_DOKUMENT = 3    # verhindert, dass ein grosses Dokument alle Plätze belegt
+KANDIDATEN = 40         # so viele Treffer liefert jede der beiden Suchen vor der Fusion
+RRF_K = 60              # Glättungskonstante der Reciprocal Rank Fusion (Standardwert)
+MIN_SCORE = 0.84        # Mindest-Ähnlichkeit des besten Treffers; kalibriert am 3.11.2026:
+                        # Fragen aus den Dokumenten 0.88–0.90, fremde Fragen 0.79–0.80
+
 
 @dataclass(frozen=True)
 class Settings:

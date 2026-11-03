@@ -26,6 +26,11 @@ CREATE TABLE IF NOT EXISTS chunks (
     embedding   vector({EMBEDDING_DIM}) NOT NULL
 );
 
+-- Volltext-Spalte (deutsche Wortstämme), wird von PostgreSQL automatisch berechnet
+ALTER TABLE chunks ADD COLUMN IF NOT EXISTS tsv tsvector
+    GENERATED ALWAYS AS (to_tsvector('german', text)) STORED;
+CREATE INDEX IF NOT EXISTS chunks_tsv_idx ON chunks USING gin (tsv);
+
 -- HNSW-Index: schnelle Näherungssuche nach Kosinus-Ähnlichkeit
 CREATE INDEX IF NOT EXISTS chunks_embedding_idx
     ON chunks USING hnsw (embedding vector_cosine_ops);

@@ -25,7 +25,7 @@ Assistent das, statt zu raten.
 | 2 | Dokumente einlesen, chunken, Embeddings speichern | ✅ |
 | 3 | Suche + Antwort mit Quellenangabe | ✅ |
 | 4 | Agent-Werkzeuge (Tool-Calling) | ✅ |
-| 5 | FastAPI + Streamlit-Chat | ⏳ |
+| 5 | FastAPI + Streamlit-Chat | ✅ |
 | 6 | Testset + Auswertung | ⏳ |
 | 7 | Monitoring (Protokoll + Dashboard) | ⏳ |
 | 8 | Leitplanken Datenschutz | ⏳ |
@@ -72,6 +72,19 @@ Monatsfristen werden nicht berücksichtigt.
 Beispiel: Entscheid am 4.3.2026 mitgeteilt, Rekursfrist 30 Tage → rechnerisches Ende
 Karfreitag 3.4.2026 → verschoben über Samstag, Sonntag und Ostermontag auf **Dienstag, 7.4.2026**.
 
+## Schnittstellen
+
+| Endpunkt | Zweck |
+|---|---|
+| `POST /ask` | Frage stellen; Antwort mit Quellen (Link direkt auf die PDF-Seite), Werkzeugaufrufen, Gesuchsentwurf, Tokens und Dauer |
+| `GET /health` | Zustand von API und Datenbank (für Docker und Monitoring) |
+| `GET /docs` | Automatisch erzeugte, interaktive API-Dokumentation |
+
+Die Streamlit-Oberfläche spricht ausschliesslich über die API – Oberfläche und Logik sind
+getrennt und laufen später als eigene Container. Das Embedding-Modell wird beim Start der API
+einmal geladen; Fragen ohne Modellaufruf werden dadurch in unter einer Sekunde beantwortet.
+Interne Fehlerdetails gehen ins Log, nie an die Nutzenden.
+
 ## Architektur
 
 _Folgt mit Meilenstein 10 (Diagramm)._
@@ -90,6 +103,10 @@ python scripts/check_setup.py   # prüft Konfiguration und Datenbank
 python scripts/download_docs.py # lädt die PDFs gemäss data/sources.csv
 python scripts/ingest.py        # chunkt, berechnet Embeddings, speichert in pgvector
 python scripts/ask.py "Innert welcher Frist kann ich Rekurs einlegen?"
+
+# Web: zwei Terminals
+uvicorn rag_assistent.api:app --reload   # API, Doku unter http://localhost:8000/docs
+streamlit run ui/Chat.py                 # Chat unter http://localhost:8501
 pytest
 ```
 

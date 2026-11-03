@@ -74,7 +74,7 @@ class FristErgebnis:
         zeilen = [
             f"Mitteilung/Eröffnung: {_fmt(self.mitteilung)} (wird nicht mitgezählt, VRG § 11 Abs. 1)",
             f"Fristbeginn: {_fmt(self.mitteilung + timedelta(days=1))}",
-            f"Dauer: {self.dauer} {self.einheit}",
+            f"Dauer: {self.dauer} {self.einheit.capitalize()}",
             f"Rechnerisches Ende: {_fmt(self.rechnerisches_ende)}",
         ]
         if self.verschoben_wegen:

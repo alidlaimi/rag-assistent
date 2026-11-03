@@ -40,11 +40,13 @@ class Answer:
     input_tokens: int = 0
     output_tokens: int = 0
     dauer_s: float = 0.0
+    werkzeuge: list = field(default_factory=list)    # Werkzeugaufrufe des Agenten
+    entwurf: str | None = None                       # Gesuchsentwurf, falls erstellt
 
 
-def build_context(hits: list[Hit]) -> str:
+def build_context(hits: list[Hit], start: int = 1) -> str:
     """Nummerierte Auszüge, damit das Modell mit [n] zitieren kann."""
-    teile = [f"[{i}] {h.titel}, Seite {h.seite}\n{h.text}" for i, h in enumerate(hits, start=1)]
+    teile = [f"[{i}] {h.titel}, Seite {h.seite}\n{h.text}" for i, h in enumerate(hits, start=start)]
     return "<auszuege>\n" + "\n\n".join(teile) + "\n</auszuege>"
 
 

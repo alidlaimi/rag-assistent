@@ -15,23 +15,38 @@ class LlmResult:
     abgeschnitten: bool  # True, wenn die Antwort wegen max_tokens endete
 
 
-def complete(system: str, user: str, max_tokens: int = 2048) -> LlmResult:
-    """Schickt eine Anfrage an Claude und gibt Text und Token-Verbrauch zurück."""
+def _client() -> anthropic.Anthropic:
     settings = get_settings()
     if not settings.anthropic_api_key:
         raise RuntimeError("ANTHROPIC_API_KEY fehlt – bitte in der Datei .env eintragen.")
+    return anthropic.Anthropic(api_key=settings.anthropic_api_key)
 
-    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
-    response = client.messages.create(
-        model=settings.claude_model,
+
+def text_of(response) -> str:
+    """Nur Textblöcke übernehmen (Werkzeugaufrufe oder Denkschritte gehören nicht in die Antwort)."""
+    return "".join(block.text for block in response.content if block.type == "text").strip()
+
+
+def create(system: str, messages: list, tools: list | None = None,
+           tool_choice: dict | None = None, max_tokens: int = 2048):
+    """Roher Modellaufruf – für die Agent-Schleife, die die Antwortblöcke selbst auswertet."""
+    kwargs = {"tools": tools} if tools else {}
+    if tool_choice:
+        kwargs["tool_choice"] = tool_choice
+    return _client().messages.create(
+        model=get_settings().claude_model,
         max_tokens=max_tokens,
         system=system,
-        messages=[{"role": "user", "content": user}],
+        messages=messages,
+        **kwargs,
     )
-    # Nur Textblöcke übernehmen (andere Blocktypen, z.B. Denkschritte, gehören nicht in die Antwort)
-    text = "".join(block.text for block in response.content if block.type == "text")
+
+
+def complete(system: str, user: str, max_tokens: int = 2048) -> LlmResult:
+    """Einfacher Aufruf ohne Werkzeuge: eine Frage, eine Antwort."""
+    response = create(system, [{"role": "user", "content": user}], max_tokens=max_tokens)
     return LlmResult(
-        text=text.strip(),
+        text=text_of(response),
         modell=response.model,
         input_tokens=response.usage.input_tokens,
         output_tokens=response.usage.output_tokens,

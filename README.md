@@ -24,7 +24,7 @@ Assistent das, statt zu raten.
 | 1 | Repository, Konfiguration, PostgreSQL/pgvector per Docker | ✅ |
 | 2 | Dokumente einlesen, chunken, Embeddings speichern | ✅ |
 | 3 | Suche + Antwort mit Quellenangabe | ✅ |
-| 4 | Agent-Werkzeuge (Tool-Calling) | ⏳ |
+| 4 | Agent-Werkzeuge (Tool-Calling) | ✅ |
 | 5 | FastAPI + Streamlit-Chat | ⏳ |
 | 6 | Testset + Auswertung | ⏳ |
 | 7 | Monitoring (Protokoll + Dashboard) | ⏳ |
@@ -52,6 +52,25 @@ Frage ─┬─ Vektorsuche (Bedeutung, pgvector/HNSW) ──┐
 | Schwelle 0.84 vor dem Modellaufruf | Kalibriert mit Fragen innerhalb (0.88–0.90) und ausserhalb (0.79–0.80) der Dokumente; fremde Fragen kosten nichts |
 | Nummerierte Auszüge, Zitate werden geprüft | Jede Aussage ist überprüfbar; Zitate ohne passenden Auszug werden als Warnung gemeldet |
 | Regel „aus Fehlen nichts schliessen“ | Ein Test zeigte, dass das Modell aus unvollständigen Auszügen auf eine fehlende Regel schloss |
+
+## Agent-Werkzeuge
+
+Claude entscheidet selbst, ob es ein Werkzeug braucht; der Code führt es aus und gibt das
+Ergebnis zurück (höchstens 5 Schritte, im letzten Schritt wird eine Antwort erzwungen).
+
+| Werkzeug | Was es tut | Warum als Werkzeug |
+|---|---|---|
+| `dokumente_durchsuchen` | Weitere Auszüge suchen, fortlaufend nummeriert | Mehrstufige Fragen brauchen oft eine zweite Suche |
+| `frist_berechnen` | Fristende nach **§ 11 Abs. 1 VRG**: Mitteilungstag zählt nicht, Ende an Samstag/Sonntag/Zürcher Feiertag → nächster Werktag | Sprachmodelle rechnen mit Daten unzuverlässig; Code ist getestet und nachvollziehbar |
+| `gesuch_entwerfen` | Briefentwurf im Schweizer Format mit Platzhaltern für persönliche Angaben | Einheitliche Form; persönliche Daten gehen nicht ans Modell |
+
+Feiertage gemäss § 1 Ruhetags- und Ladenöffnungsgesetz (LS 822.4): Neujahrstag, Karfreitag,
+Ostermontag, 1. Mai, Auffahrt, Pfingstmontag, 1. August, Weihnachtstag, Stephanstag.
+Der Berchtoldstag ist im Kanton Zürich kein öffentlicher Ruhetag. Lokale Feiertage und
+Monatsfristen werden nicht berücksichtigt.
+
+Beispiel: Entscheid am 4.3.2026 mitgeteilt, Rekursfrist 30 Tage → rechnerisches Ende
+Karfreitag 3.4.2026 → verschoben über Samstag, Sonntag und Ostermontag auf **Dienstag, 7.4.2026**.
 
 ## Architektur
 

@@ -23,6 +23,8 @@ from rag_assistent.tools.fristen import berechne_frist
 from rag_assistent.tools.gesuch import gesuch_entwerfen
 
 MAX_SCHRITTE = 5
+FRISTREGEL_SUCHE = ("Fristberechnung Tag der Mitteilung nicht mitgezählt letzter Tag Samstag "
+                    "öffentlicher Ruhetag nächster Werktag")
 
 TOOLS = [
     {
@@ -150,7 +152,11 @@ class _Lauf:
             ergebnis = berechne_frist(date.fromisoformat(eingabe["datum"]),
                                       int(eingabe["dauer"]), eingabe.get("einheit", "tage"))
             titel = eingabe.get("fristart", "Frist")
-            return f"{titel}:\n{ergebnis.als_text()}"
+            # Rechtsgrundlage der Berechnung (VRG § 11) als zitierbaren Auszug mitliefern,
+            # damit die Verschiebungsregel belegt ist und nicht nur aus der Werkzeugbeschreibung stammt
+            beleg = self.suchen(FRISTREGEL_SUCHE)
+            return (f"{titel}:\n{ergebnis.als_text()}\n\n"
+                    f"Rechtsgrundlage der Berechnung (zum Zitieren, falls passend):\n{beleg}")
         if name == "gesuch_entwerfen":
             self.entwurf = gesuch_entwerfen(**eingabe)
             return "Entwurf erstellt:\n" + self.entwurf

@@ -10,13 +10,16 @@ WORKDIR /app
 # PyTorch in der CPU-Variante: rund 200 MB statt über 2 GB mit Grafikkarten-Bibliotheken
 RUN pip install torch --index-url https://download.pytorch.org/whl/cpu
 
-# Abhängigkeiten zuerst – diese Schicht bleibt im Cache, solange pyproject.toml gleich bleibt
+# Abhängigkeiten zuerst, mit leerem Paket: Diese Schicht bleibt im Cache, solange sich
+# pyproject.toml nicht ändert – eine Code-Änderung installiert nicht alle Pakete neu
 COPY pyproject.toml README.md ./
-COPY src ./src
-RUN pip install -e .
+RUN mkdir -p src/rag_assistent && touch src/rag_assistent/__init__.py && pip install -e .
 
 # Embedding-Modell beim Bauen laden: Der Container startet ohne Internetzugriff auf Hugging Face
 RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('intfloat/multilingual-e5-small')"
+
+# Erst jetzt der Code (ändert sich am häufigsten)
+COPY src ./src
 
 COPY scripts ./scripts
 COPY data/sources.csv ./data/sources.csv

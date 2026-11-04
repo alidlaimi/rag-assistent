@@ -113,3 +113,25 @@ def test_personendaten_erreichen_das_modell_nie(monkeypatch):
         assert wert not in alles
     assert set(a.personendaten) == {"NAME", "E-MAIL", "AHV-NUMMER"}
     assert "Muster" in a.frage   # die Originalfrage bleibt lokal für die Anzeige erhalten
+
+
+def test_fristenrechner_liefert_zitierbare_rechtsgrundlage(monkeypatch):
+    vrg = Hit(chunk_id=99, source_id="zh-vrg", titel="VRG", url="https://x", seite=5,
+              text="§ 11 Fristen", score=0.86)
+    suchen = []
+
+    def suche(frage):
+        suchen.append(frage)
+        return [hit(1)] if len(suchen) == 1 else [vrg]
+
+    monkeypatch.setattr(agent, "search", suche)
+    skript = iter([
+        antwort(tool("frist_berechnen", {"datum": "2026-03-04", "dauer": 30, "einheit": "tage"}),
+                stop="tool_use"),
+        antwort(text("Fristende 07.04.2026 [1], Verschiebung nach VRG § 11 [2].")),
+    ])
+    monkeypatch.setattr(agent.llm, "create", lambda system, messages, **kw: next(skript))
+    a = agent.run("Frist?")
+    assert suchen[1] == agent.FRISTREGEL_SUCHE
+    assert "[2] VRG, Seite 5" in a.werkzeuge[0].ergebnis
+    assert [h.source_id for h in a.quellen] == ["doc1", "zh-vrg"]

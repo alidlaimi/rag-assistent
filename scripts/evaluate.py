@@ -60,6 +60,8 @@ def main() -> int:
                 details.append(f"HALLUZINATION {b.halluzination}")
             if b.werkzeug_ok is False:
                 details.append("Werkzeug falsch")
+            if b.datenschutz_ok is False:
+                details.append("Personendaten nicht entfernt")
             if b.quelle_zitiert is False:
                 details.append("Quelle " + ("nicht zitiert" if b.quelle_gefunden else "nicht gefunden"))
             print(f"{zeichen(b.bestanden)} {fall.id:<26} {b.dauer_s:5.1f} s  {' · '.join(details)}")

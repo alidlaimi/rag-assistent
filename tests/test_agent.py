@@ -99,3 +99,17 @@ def test_letzter_schritt_erzwingt_antwort_ohne_werkzeug(monkeypatch):
     monkeypatch.setattr(agent.llm, "create", fake)
     a = agent.run("Frage", max_schritte=3)
     assert choices[-1] == {"type": "none"} and a.antwort == "Abschluss."
+
+
+def test_personendaten_erreichen_das_modell_nie(monkeypatch):
+    gesucht = []
+    monkeypatch.setattr(agent, "search", lambda frage: gesucht.append(frage) or [hit(1)])
+    gesendet = []
+    monkeypatch.setattr(agent.llm, "create", lambda system, messages, **kw:
+                        gesendet.append(str(messages)) or antwort(text("Zwei Semester [1].")))
+    a = agent.run("Ich heisse Max Muster, max@example.com, AHV 756.1234.5678.97. Wie lange Urlaub?")
+    alles = " ".join(gesucht + gesendet)
+    for wert in ("Muster", "max@example.com", "756.1234"):
+        assert wert not in alles
+    assert set(a.personendaten) == {"NAME", "E-MAIL", "AHV-NUMMER"}
+    assert "Muster" in a.frage   # die Originalfrage bleibt lokal für die Anzeige erhalten

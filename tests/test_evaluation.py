@@ -111,3 +111,13 @@ def test_zusammenfassung():
     k = zusammenfassung([bewerte(FALL, a)])
     assert k["Bestanden gesamt"] == "1/1 (100 %)"
     assert k["Halluzinationen"] == "0 von 1"
+
+
+def test_personendaten_pruefung():
+    fall = Testfall(id="p", kategorie="fakt", frage="?", quellen=[{"dok": "ro", "seite": 11}],
+                    muss=["zwei Semester"], personendaten=["E-MAIL"])
+    a = Answer(frage="?", antwort="Bis zu zwei Semester [1].", gefunden=True,
+               treffer=[hit("ro", 11)], quellen=[hit("ro", 11)])
+    assert bewerte(fall, a).datenschutz_ok is False
+    a.personendaten = ["E-MAIL"]
+    assert bewerte(fall, a).bestanden

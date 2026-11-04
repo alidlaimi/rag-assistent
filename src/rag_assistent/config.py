@@ -30,6 +30,10 @@ RRF_K = 60              # Glättungskonstante der Reciprocal Rank Fusion (Standa
 MIN_SCORE = 0.84        # Mindest-Ähnlichkeit des besten Treffers; kalibriert am 3.11.2026:
                         # Fragen aus den Dokumenten 0.88–0.90, fremde Fragen 0.79–0.80
 
+# Missbrauchs- und Kostenschutz der API
+RATE_LIMIT_PRO_MINUTE = int(os.getenv("RATE_LIMIT_PRO_MINUTE", "20"))   # Anfragen pro Absender
+TAGESBUDGET_USD = float(os.getenv("TAGESBUDGET_USD", "2.0"))            # danach keine Modellaufrufe
+
 # Listenpreise Anthropic in USD pro 1 Mio. Tokens (Input, Output), Stand November 2026,
 # Quelle: https://platform.claude.com/docs/en/about-claude/pricing
 PREISE_USD = {

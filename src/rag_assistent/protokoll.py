@@ -33,7 +33,8 @@ def eintrag(frage: str, modus: str, a: Answer | None = None, dauer_s: float = 0.
     if fehler is not None or a is None:
         return basis | {"status": "fehler", "modell": None, "input_tokens": 0, "output_tokens": 0,
                         "kosten_usd": 0.0, "bester_score": None, "quellen": [], "werkzeuge": [],
-                        "ungueltige_zitate": 0, "fehlerart": type(fehler).__name__ if fehler else None}
+                        "ungueltige_zitate": 0, "fehlerart": type(fehler).__name__ if fehler else None,
+                        "personendaten": []}
     return basis | {
         "status": "beantwortet" if a.gefunden else "abgelehnt",
         "modell": a.modell or None,
@@ -45,18 +46,19 @@ def eintrag(frage: str, modus: str, a: Answer | None = None, dauer_s: float = 0.
         "werkzeuge": [w.name for w in a.werkzeuge],
         "ungueltige_zitate": len(a.ungueltige_zitate),
         "fehlerart": None,
+        "personendaten": a.personendaten,   # nur die Arten, nie die Werte
     }
 
 
 SPALTEN = ["frage_hash", "frage_laenge", "modus", "status", "modell", "input_tokens",
            "output_tokens", "kosten_usd", "dauer_ms", "bester_score", "quellen", "werkzeuge",
-           "ungueltige_zitate", "fehlerart"]
+           "ungueltige_zitate", "fehlerart", "personendaten"]
 
 
 def schreibe(e: dict) -> None:
     """Speichert einen Eintrag. Fehler werden geloggt, aber nie weitergereicht."""
     try:
-        werte = [json.dumps(e[s], ensure_ascii=False) if s in ("quellen", "werkzeuge") else e[s]
+        werte = [json.dumps(e[s], ensure_ascii=False) if s in ("quellen", "werkzeuge", "personendaten") else e[s]
                  for s in SPALTEN]
         with get_connection() as conn:
             conn.execute(
@@ -81,7 +83,8 @@ def statistik(tage: int = 30) -> dict:
                    coalesce(sum(input_tokens + output_tokens), 0),
                    percentile_cont(0.5) WITHIN GROUP (ORDER BY dauer_ms),
                    percentile_cont(0.95) WITHIN GROUP (ORDER BY dauer_ms),
-                   count(*) FILTER (WHERE ungueltige_zitate > 0)
+                   count(*) FILTER (WHERE ungueltige_zitate > 0),
+                   count(*) FILTER (WHERE jsonb_array_length(personendaten) > 0)
             FROM anfragen WHERE {zeitraum}""", (tage,)).fetchone()
         pro_tag = conn.execute(f"""
             SELECT date_trunc('day', zeitpunkt AT TIME ZONE 'Europe/Zurich')::date AS tag,
@@ -102,7 +105,7 @@ def statistik(tage: int = 30) -> dict:
                    input_tokens + output_tokens, werkzeuge, fehlerart
             FROM anfragen WHERE {zeitraum} ORDER BY zeitpunkt DESC LIMIT 20""", (tage,)).fetchall()
 
-    anzahl, beantw, abgel, fehler, mit_modell, kosten, tokens, median, p95, warn = k
+    anzahl, beantw, abgel, fehler, mit_modell, kosten, tokens, median, p95, warn, pii = k
     return {
         "tage": tage,
         "kennzahlen": {
@@ -110,7 +113,7 @@ def statistik(tage: int = 30) -> dict:
             "mit_modellaufruf": mit_modell, "kosten_usd": round(kosten, 4),
             "kosten_pro_modellaufruf_usd": round(kosten / mit_modell, 4) if mit_modell else 0.0,
             "tokens": tokens, "dauer_median_ms": round(median or 0), "dauer_p95_ms": round(p95 or 0),
-            "zitat_warnungen": warn,
+            "zitat_warnungen": warn, "mit_personendaten": pii,
         },
         "pro_tag": [{"tag": t.isoformat(), "anfragen": n, "kosten_usd": round(c, 4), "abgelehnt": ab}
                     for t, n, c, ab in pro_tag],
@@ -120,3 +123,20 @@ def statistik(tage: int = 30) -> dict:
                     "modell": mo, "dauer_ms": d, "kosten_usd": round(c, 4), "tokens": t,
                     "werkzeuge": w, "fehlerart": f} for z, s, m, mo, d, c, t, w, f in letzte],
     }
+
+
+def kosten_heute() -> float:
+    """Kosten seit Mitternacht (Schweizer Zeit) in USD – für die Kostenbremse.
+
+    Ist die Datenbank nicht erreichbar, wird 0 zurückgegeben (Verfügbarkeit vor Bremse);
+    der Fehler wird geloggt.
+    """
+    try:
+        with get_connection() as conn:
+            return float(conn.execute(
+                """SELECT coalesce(sum(kosten_usd), 0) FROM anfragen
+                   WHERE zeitpunkt >= date_trunc('day', now() AT TIME ZONE 'Europe/Zurich')
+                                      AT TIME ZONE 'Europe/Zurich'""").fetchone()[0])
+    except Exception:
+        log.exception("Tageskosten konnten nicht gelesen werden")
+        return 0.0

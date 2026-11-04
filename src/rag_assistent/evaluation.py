@@ -42,6 +42,7 @@ class Testfall:
     darf_nicht: list[str] = field(default_factory=list)
     werkzeug: str | None = None
     kein_werkzeug: str | None = None
+    personendaten: list[str] = field(default_factory=list)
     notiz: str = ""
 
 
@@ -68,6 +69,7 @@ class Bewertung:
     fehlende: list[str] = field(default_factory=list)
     halluzination: list[str] = field(default_factory=list)  # Gründe; leer = keine
     werkzeug_ok: bool | None = None
+    datenschutz_ok: bool | None = None    # erwartete Personendaten entfernt
     modellaufruf: bool = False
     kosten_usd: float = 0.0
     dauer_s: float = 0.0
@@ -78,6 +80,7 @@ class Bewertung:
         return (not self.halluzination
                 and self.fakten in (None, 1.0)
                 and self.werkzeug_ok is not False
+                and self.datenschutz_ok is not False
                 and self.quelle_zitiert is not False)
 
 
@@ -111,6 +114,8 @@ def bewerte(fall: Testfall, a: Answer) -> Bewertung:
         b.werkzeug_ok = fall.werkzeug in genutzt
     if fall.kein_werkzeug:
         b.werkzeug_ok = fall.kein_werkzeug not in genutzt and (b.werkzeug_ok is not False)
+    if fall.personendaten:
+        b.datenschutz_ok = set(fall.personendaten) <= set(a.personendaten)
     return b
 
 
@@ -139,6 +144,8 @@ def zusammenfassung(bewertungen: list[Bewertung]) -> dict[str, str]:
         "Korrekte Ablehnung": _quote([not b.halluzination for b in ablehnen]),
         "Werkzeugnutzung korrekt": _quote([b.werkzeug_ok for b in bewertungen
                                            if b.werkzeug_ok is not None]),
+        "Personendaten entfernt": _quote([b.datenschutz_ok for b in bewertungen
+                                          if b.datenschutz_ok is not None]),
         "Halluzinationen": f"{sum(bool(b.halluzination) for b in bewertungen)} von {len(bewertungen)}",
         "Bestanden gesamt": _quote([b.bestanden for b in bewertungen]),
     }

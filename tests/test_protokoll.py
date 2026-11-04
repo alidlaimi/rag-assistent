@@ -76,3 +76,14 @@ def test_statistik_endpunkt(monkeypatch):
 def test_tests_schreiben_nie_in_die_echte_datenbank():
     with pytest.raises(ConnectionError):
         protokoll.get_connection()
+
+
+def test_protokoll_speichert_nur_arten_der_personendaten():
+    a = antwort()
+    a.personendaten = ["E-MAIL", "NAME"]
+    e = protokoll.eintrag(FRAGE, "agent", a)
+    assert e["personendaten"] == ["E-MAIL", "NAME"]
+
+
+def test_kosten_heute_ohne_datenbank_ist_null():
+    assert protokoll.kosten_heute() == 0.0   # conftest sperrt die Datenbank

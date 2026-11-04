@@ -53,3 +53,26 @@ def test_interner_fehler_gibt_keine_details_preis(monkeypatch):
 def test_health(monkeypatch):
     monkeypatch.setattr(api, "db_ok", lambda: True)
     assert client.get("/health").json() == {"status": "ok", "datenbank": True}
+
+
+def test_rate_limit(monkeypatch):
+    monkeypatch.setattr(api, "RATE_LIMIT_PRO_MINUTE", 2)
+    monkeypatch.setattr(api.agent, "run", beispiel_antwort)
+    codes = [client.post("/ask", json={"frage": "Rekursfrist?"}).status_code for _ in range(3)]
+    assert codes == [200, 200, 429]
+
+
+def test_tagesbudget_stoppt_vor_modellaufruf(monkeypatch):
+    monkeypatch.setattr(api.protokoll, "kosten_heute", lambda: 5.0)
+    monkeypatch.setattr(api.agent, "run", lambda f: (_ for _ in ()).throw(AssertionError))
+    r = client.post("/ask", json={"frage": "Rekursfrist?"})
+    assert r.status_code == 503 and "Tagesbudget" in r.json()["detail"]
+
+
+def test_personendaten_werden_gemeldet(monkeypatch):
+    def antwort_mit_pii(frage):
+        a = beispiel_antwort(frage)
+        a.personendaten = ["E-MAIL"]
+        return a
+    monkeypatch.setattr(api.agent, "run", antwort_mit_pii)
+    assert client.post("/ask", json={"frage": "x@y.ch Frist?"}).json()["personendaten"] == ["E-MAIL"]

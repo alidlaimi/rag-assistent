@@ -42,6 +42,7 @@ ohne_modell = k["anfragen"] - k["mit_modellaufruf"]
 st.caption(f"{k['beantwortet']} beantwortet · {k['abgelehnt']} abgelehnt · {k['fehler']} Fehler · "
            f"{ohne_modell} ohne Modellaufruf (kostenlos) · "
            f"{k['zitat_warnungen']} Warnungen wegen Zitaten ohne Auszug · "
+           f"{k.get('mit_personendaten', 0)} mit entfernten Personendaten · "
            f"{k['tokens']:,} Tokens".replace(",", "'"))
 
 # --- Verlauf: zwei getrennte Diagramme statt zwei Achsen in einem ---

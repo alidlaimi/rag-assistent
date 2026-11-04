@@ -7,7 +7,7 @@ protokoll.schreibe() fängt das ab, wie im Betrieb bei einem Datenbankausfall.
 """
 import pytest
 
-from rag_assistent import protokoll
+from rag_assistent import api, protokoll
 
 
 def _keine_datenbank():
@@ -17,3 +17,9 @@ def _keine_datenbank():
 @pytest.fixture(autouse=True)
 def keine_echte_datenbank(monkeypatch):
     monkeypatch.setattr(protokoll, "get_connection", _keine_datenbank)
+
+
+@pytest.fixture(autouse=True)
+def frisches_rate_limit():
+    """Jeder Test startet ohne frühere Anfragen im Rate-Limit."""
+    api._anfragen_pro_absender.clear()

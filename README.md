@@ -28,7 +28,7 @@ Assistent das, statt zu raten.
 | 5 | FastAPI + Streamlit-Chat | ✅ |
 | 6 | Testset + Auswertung | ✅ |
 | 7 | Monitoring (Protokoll + Dashboard) | ✅ |
-| 8 | Leitplanken Datenschutz | ⏳ |
+| 8 | Leitplanken Datenschutz | ✅ |
 | 9 | GitHub Actions (Tests, Docker-Image) | ⏳ |
 | 10 | Dokumentation | ⏳ |
 
@@ -86,6 +86,22 @@ getrennt und laufen später als eigene Container. Das Embedding-Modell wird beim
 einmal geladen; Fragen ohne Modellaufruf werden dadurch in unter einer Sekunde beantwortet.
 Interne Fehlerdetails gehen ins Log, nie an die Nutzenden.
 
+## Leitplanken
+
+| Leitplanke | Umsetzung | Geprüft durch |
+|---|---|---|
+| **Keine Personendaten an das Modell** | Filter vor jeder Suche und jedem Modellaufruf ersetzt E-Mail, AHV-Nummer, IBAN, Telefon, Matrikelnummer, Strassenadresse, Geburtsdatum (mit „geboren“) und Namen (mit „ich heisse …“) durch Platzhalter wie `[E-MAIL]`. Die Oberfläche weist darauf hin. Gesuchsentwürfe verwenden nur Platzhalter | 19 Unit-Tests, Agent-Test (kein Wert erreicht Suche oder Modell), Testfall `leitplanke-personendaten` |
+| **Keine Personendaten im Protokoll** | Frage nur als Länge + HMAC-Prüfsumme; von Personendaten nur die Art, nie der Wert | Unit-Tests |
+| **API-Schlüssel nie im Code** | Nur in `.env` (in `.gitignore`), nie ausgegeben (`repr=False`) | Test durchsucht den Quellcode nach Schlüsseln; Geheimnis-Prüfung in der CI (M9) |
+| **Fragen ausserhalb der Dokumente** | Schwelle vor dem Modellaufruf, Ablehnungssatz, Hinweis auf die abgedeckten Themen | Testfälle `nicht_in_dokumenten`, `ausserhalb` |
+| **Prompt-Injection** | Systemprompt: Anweisungen in Frage, Auszügen oder Werkzeug-Ergebnissen werden nie befolgt | Testfall `leitplanke-injection` |
+| **Missbrauch und Kosten** | Rate-Limit (20 Anfragen/Minute pro Absender), Tagesbudget (USD 2; danach keine Modellaufrufe), max. 1000 Zeichen pro Frage | API-Tests |
+
+**Bekannte Grenzen:** Der Filter ist regelbasiert. Freie Personennamen („… meine Kollegin Anna
+Beispiel …“) und Postleitzahl + Ort erkennt er nicht; dafür bräuchte es ein Erkennungsmodell
+(Named Entity Recognition). Das Rate-Limit gilt pro API-Prozess; bei mehreren Instanzen braucht
+es einen gemeinsamen Speicher.
+
 ## Monitoring
 
 Jede Anfrage über die API landet in der Tabelle `anfragen`: Zeitpunkt, Modus, Status
@@ -113,21 +129,23 @@ kostenlos. Letzter Bericht: [`eval/bericht.md`](eval/bericht.md), alle Läufe: [
 
 | Kategorie | Fälle | Geprüft |
 |---|---|---|
-| Fakten | 24 | richtige Antwort (Pflichtbegriffe) und richtige Quelle (Dokument + Seite) |
+| Fakten | 22 | richtige Antwort (Pflichtbegriffe) und richtige Quelle (Dokument + Seite) |
+| Leitplanken | 2 | Prompt-Injection ignoriert; Personendaten vor dem Modellaufruf entfernt |
 | Fristen | 2 | Fristenrechner genutzt, korrektes Datum über Feiertage (Ostern, Weihnachten 2026) |
 | Rückfrage | 1 | ohne Datum nachfragen, nicht rechnen |
 | Nicht in den Dokumenten | 2 | ablehnen statt erfinden |
 | Ausserhalb | 1 | kein Modellaufruf |
 
-**Ergebnis (4.11.2026, Claude Sonnet 5.5, Agent):**
+**Ergebnis (4.11.2026, Claude Sonnet 5.5, Agent, nach Meilenstein 8):**
 
 | Kennzahl | Wert |
 |---|---|
 | Bestanden | **30/30** |
 | Halluzinationen | **0/30** |
 | Quellen-Trefferquote / Zitiergenauigkeit | 26/26 / 26/26 |
-| Kosten | USD 0.64 gesamt, **≈ 2 Rappen pro Frage** |
-| Antwortzeit (Median) | 5.7 s |
+| Prompt-Injection ignoriert / Personendaten entfernt | 1/1 / 1/1 |
+| Kosten | USD 0.63 gesamt, **≈ 2 Rappen pro Frage** |
+| Antwortzeit (Median) | 5.8 s |
 
 **Verlauf – was gemessen und geändert wurde:**
 
@@ -137,6 +155,7 @@ kostenlos. Letzter Bericht: [`eval/bericht.md`](eval/bericht.md), alle Läufe: [
 | – | Chunk-Grösse, nur Suche: 600 → 77 %, 800 → 88 %, 1000 → 85 % | – | Hypothese „kleiner ist besser“ widerlegt; 800/150 übernommen (Gewinn klein: 1 Fall) |
 | 2 | Chunks 800/150, ASO im Titel als bisheriges Recht markiert | 29/30 | Unterbruch korrekt (inkl. RO § 48); dafür Bachelor-Höchstdauer unvollständig – das Modell suchte nicht nach |
 | 3 | Regel „vor ‚steht nicht drin‘ gezielt nachsuchen“ | **30/30** | Bachelor-Fall zusätzlich **5/5 stabil** in Wiederholungsmessung |
+| 4 | Leitplanken (Personendaten-Filter, Regel gegen Prompt-Injection); 2 einfache Fälle durch 2 Leitplanken-Fälle ersetzt | **30/30** | Injection abgewiesen („Die Auszüge nennen 30 Tage, nicht 90“); Frage mit Name, E-Mail und AHV-Nummer korrekt beantwortet, ohne dass die Werte das Modell erreichten |
 
 Der Agent gleicht Schwächen der Suche aus: Die reine Suche findet die richtige Seite in 88 %
 der Fälle, der Agent mit eigener Nachsuche in 100 %.

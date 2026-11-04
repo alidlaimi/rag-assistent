@@ -28,7 +28,14 @@ def frage_stellen(frage: str, mit_agent: bool) -> dict:
 
 def antwort_anzeigen(daten: dict, nr: int) -> None:
     """Zeigt eine Antwort an; `nr` macht die Schlüssel der Knöpfe eindeutig."""
+    if daten.get("personendaten"):
+        st.info("🔒 Personendaten erkannt und vor der Verarbeitung entfernt: "
+                + ", ".join(daten["personendaten"]) + ". Bitte keine Personendaten eingeben.")
     st.markdown(daten["antwort"])
+    if not daten["gefunden"]:
+        st.caption("Dieser Assistent beantwortet nur Fragen zu den hinterlegten Dokumenten: "
+                   "Studien- und Rahmenordnungen, Gebühren, Urlaub, Nachteilsausgleich, KI-Nutzung "
+                   "an der ZHdK sowie Fristen (VRG) und Steuererklärung im Kanton Zürich.")
 
     for w in daten["werkzeuge"]:
         if w["name"] == "frist_berechnen":

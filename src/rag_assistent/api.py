@@ -5,12 +5,14 @@ Doku:   http://localhost:8000/docs  (automatisch erzeugt, im Browser ausprobierb
 """
 import logging
 import time
+from collections import defaultdict, deque
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from rag_assistent import agent, protokoll, rag
+from rag_assistent.config import RATE_LIMIT_PRO_MINUTE, TAGESBUDGET_USD
 from rag_assistent.db import get_connection
 from rag_assistent.rag import Answer
 
@@ -68,6 +70,7 @@ class AntwortOut(BaseModel):
     werkzeuge: list[WerkzeugOut]
     entwurf: str | None
     ungueltige_zitate: list[int]
+    personendaten: list[str]   # Arten der vor dem Modellaufruf entfernten Personendaten
     modell: str
     input_tokens: int
     output_tokens: int
@@ -87,6 +90,7 @@ def to_out(a: Answer) -> AntwortOut:
                    for w in a.werkzeuge],
         entwurf=a.entwurf,
         ungueltige_zitate=a.ungueltige_zitate,
+        personendaten=a.personendaten,
         modell=a.modell,
         input_tokens=a.input_tokens,
         output_tokens=a.output_tokens,
@@ -110,9 +114,36 @@ def health() -> dict:
     return {"status": "ok" if datenbank else "eingeschraenkt", "datenbank": datenbank}
 
 
+# Einfaches Rate-Limit im Speicher: Zeitpunkte der letzten Anfragen pro Absender.
+# Gilt pro API-Prozess; bei mehreren Instanzen bräuchte es einen gemeinsamen Speicher (z.B. Redis).
+_anfragen_pro_absender: dict[str, deque] = defaultdict(deque)
+
+
+def pruefe_rate_limit(absender: str) -> None:
+    jetzt = time.monotonic()
+    zeiten = _anfragen_pro_absender[absender]
+    while zeiten and jetzt - zeiten[0] > 60:
+        zeiten.popleft()
+    if len(zeiten) >= RATE_LIMIT_PRO_MINUTE:
+        raise HTTPException(status_code=429, detail="Zu viele Anfragen. Bitte in einer Minute "
+                            "erneut versuchen.")
+    zeiten.append(jetzt)
+
+
+def pruefe_tagesbudget() -> None:
+    if protokoll.kosten_heute() >= TAGESBUDGET_USD:
+        raise HTTPException(status_code=503, detail="Das Tagesbudget für Modellaufrufe ist "
+                            "aufgebraucht. Bitte morgen erneut versuchen.")
+
+
 @app.post("/ask", response_model=AntwortOut)
-def ask(req: FrageIn) -> AntwortOut:
-    """Stellt eine Frage an den Assistenten. Jede Anfrage wird protokolliert (ohne Fragetext)."""
+def ask(req: FrageIn, request: Request) -> AntwortOut:
+    """Stellt eine Frage an den Assistenten. Jede Anfrage wird protokolliert (ohne Fragetext).
+
+    Leitplanken: Rate-Limit pro Absender, Tagesbudget, Personendaten-Filter (in agent/rag).
+    """
+    pruefe_rate_limit(request.client.host if request.client else "unbekannt")
+    pruefe_tagesbudget()
     modus = "agent" if req.agent else "rag"
     start = time.perf_counter()
     try:

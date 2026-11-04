@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 
 from rag_assistent import llm
 from rag_assistent.config import MIN_SCORE
+from rag_assistent.datenschutz import maskiere
 from rag_assistent.retrieval import Hit, search
 
 KEINE_ANTWORT = "Dazu finde ich in den vorliegenden Dokumenten keine Angaben."
@@ -44,6 +45,7 @@ class Answer:
     dauer_s: float = 0.0
     werkzeuge: list = field(default_factory=list)    # Werkzeugaufrufe des Agenten
     entwurf: str | None = None                       # Gesuchsentwurf, falls erstellt
+    personendaten: list[str] = field(default_factory=list)  # Arten entfernter Personendaten
 
 
 def build_context(hits: list[Hit], start: int = 1) -> str:
@@ -63,21 +65,23 @@ def extract_citations(text: str) -> list[int]:
 
 def answer(frage: str) -> Answer:
     start = time.perf_counter()
+    original = frage
+    frage, personendaten = maskiere(frage)   # Leitplanke: keine Personendaten an das Modell
     hits = search(frage)
 
     # Leitplanke: Ist selbst der beste Treffer der Bedeutung nach zu weit weg, betrifft die
     # Frage die Dokumente nicht. Dann wird das Modell gar nicht gefragt – keine erfundene
     # Antwort, keine Kosten.
     if not hits or max(h.score for h in hits) < MIN_SCORE:
-        return Answer(frage=frage, antwort=KEINE_ANTWORT, gefunden=False,
-                      dauer_s=time.perf_counter() - start)
+        return Answer(frage=original, antwort=KEINE_ANTWORT, gefunden=False,
+                      dauer_s=time.perf_counter() - start, personendaten=personendaten)
 
     result = llm.complete(SYSTEM_PROMPT, f"{build_context(hits)}\n\nFrage: {frage}")
     zitate = extract_citations(result.text)
     gefunden = KEINE_ANTWORT not in result.text
 
     return Answer(
-        frage=frage,
+        frage=original,
         antwort=result.text,
         gefunden=gefunden,
         treffer=hits,
@@ -87,4 +91,5 @@ def answer(frage: str) -> Answer:
         input_tokens=result.input_tokens,
         output_tokens=result.output_tokens,
         dauer_s=time.perf_counter() - start,
+        personendaten=personendaten,
     )

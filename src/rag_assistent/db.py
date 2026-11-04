@@ -52,6 +52,8 @@ CREATE TABLE IF NOT EXISTS anfragen (
     fehlerart         TEXT                          -- nur Fehlerklasse, keine Details
 );
 CREATE INDEX IF NOT EXISTS anfragen_zeitpunkt_idx ON anfragen (zeitpunkt);
+-- Arten entfernter Personendaten (z.B. ["E-MAIL"]), nie die Werte
+ALTER TABLE anfragen ADD COLUMN IF NOT EXISTS personendaten JSONB NOT NULL DEFAULT '[]';
 
 -- HNSW-Index: schnelle Näherungssuche nach Kosinus-Ähnlichkeit
 CREATE INDEX IF NOT EXISTS chunks_embedding_idx

@@ -1,0 +1,10 @@
+# Nie ins Image: Geheimnisse, lokale Umgebung, Rohdaten, Protokolle
+.env
+.venv/
+.git/
+**/__pycache__/
+.pytest_cache/
+data/raw/
+kalibrierung*.txt
+eval/ergebnisse/
+.vscode/

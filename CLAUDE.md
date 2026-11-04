@@ -31,7 +31,7 @@ FastAPI, Streamlit, pytest, Docker / docker-compose, GitHub Actions.
 ## Umgebung
 - Windows, PowerShell, VS Code.
 - Virtuelle Umgebung: `.venv` (aktivieren mit `.\.venv\Scripts\Activate.ps1`).
-- Datenbank: `docker compose up -d`; Prüfung: `python scripts/check_setup.py`.
+- Datenbank: `docker compose up -d`; ganze Anwendung: `docker compose --profile app up -d --build`; Prüfung: `python scripts/check_setup.py`.
 - Dokumente laden: `python scripts/download_docs.py`; einlesen: `python scripts/ingest.py`.
 - API: `uvicorn rag_assistent.api:app --reload`; Chat: `streamlit run ui/Chat.py`.
 - Testset: `python scripts/evaluate.py --nur-suche` (gratis) bzw. ohne Flag (kostet ca. USD 0.60).

@@ -1,3 +1,5 @@
+# Entwicklung (nur Datenbank):      docker compose up -d
+# Ganze Anwendung in Containern:    docker compose --profile app up -d --build
 services:
   db:
     # Offizielles PostgreSQL-Image mit vorinstallierter pgvector-Erweiterung
@@ -19,6 +21,36 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+  api:
+    profiles: ["app"]
+    build: .
+    image: rag-assistent-api
+    env_file: .env                 # API-Schlüssel und Salt kommen zur Laufzeit, nie ins Image
+    environment:
+      POSTGRES_HOST: db            # im Container-Netz heisst die Datenbank "db"
+      POSTGRES_PORT: "5432"
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data/raw:/app/data/raw:ro   # PDFs für scripts/ingest.py
+
+  ui:
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: ui/Dockerfile
+    image: rag-assistent-ui
+    environment:
+      API_URL: http://api:8000
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "8501:8501"
 
 volumes:
   pgdata:

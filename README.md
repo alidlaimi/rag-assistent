@@ -1,5 +1,7 @@
 # RAG-Assistent für Verwaltungsdokumente
 
+[![CI](https://github.com/alidlaimi/rag-assistent/actions/workflows/ci.yml/badge.svg)](https://github.com/alidlaimi/rag-assistent/actions/workflows/ci.yml)
+
 Beantwortet Fragen zu Reglementen, Weisungen und Merkblättern – **immer mit Quellenangabe**
 (Dokument und Seite). Agent-Funktionen übernehmen mehrstufige Abläufe, etwa das Prüfen von
 Fristen oder den Entwurf eines kurzen Gesuchs. Steht etwas nicht in den Dokumenten, sagt der
@@ -29,7 +31,7 @@ Assistent das, statt zu raten.
 | 6 | Testset + Auswertung | ✅ |
 | 7 | Monitoring (Protokoll + Dashboard) | ✅ |
 | 8 | Leitplanken Datenschutz | ✅ |
-| 9 | GitHub Actions (Tests, Docker-Image) | ⏳ |
+| 9 | GitHub Actions (Tests, Docker-Image) | ✅ |
 | 10 | Dokumentation | ⏳ |
 
 ## Suche und Antwort
@@ -85,6 +87,37 @@ Die Streamlit-Oberfläche spricht ausschliesslich über die API – Oberfläche 
 getrennt und laufen später als eigene Container. Das Embedding-Modell wird beim Start der API
 einmal geladen; Fragen ohne Modellaufruf werden dadurch in unter einer Sekunde beantwortet.
 Interne Fehlerdetails gehen ins Log, nie an die Nutzenden.
+
+## Betrieb als Container
+
+```powershell
+docker compose --profile app up -d --build   # Datenbank, API und Chat
+docker compose --profile app run --rm api python scripts/ingest.py   # einmalig: Dokumente einlesen
+```
+Chat: http://localhost:8501 · API-Doku: http://localhost:8000/docs
+
+| Image | Inhalt | Entscheide |
+|---|---|---|
+| `rag-assistent-api` | FastAPI, Agent, Embedding-Modell | PyTorch in der CPU-Variante (≈ 200 MB statt > 2 GB); Modell wird beim Bauen geladen, der Container braucht zur Laufzeit keinen Zugriff auf Hugging Face; läuft nicht als root; Healthcheck auf `/health` |
+| `rag-assistent-ui` | nur Streamlit | spricht ausschliesslich mit der API, enthält weder Modell noch Datenbankzugang |
+| `pgvector/pgvector:pg17` | PostgreSQL mit pgvector | Daten in einem benannten Volume |
+
+Geheimnisse (`.env`) kommen erst zur Laufzeit in den Container und sind über `.dockerignore`
+vom Image ausgeschlossen. Ohne `--profile app` startet nur die Datenbank (Entwicklung).
+
+## CI/CD
+
+GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) läuft bei jedem Push:
+
+| Job | Was er tut |
+|---|---|
+| **Tests** | installiert das Projekt und führt alle Tests aus (ohne Datenbank, Modell oder API-Schlüssel) |
+| **Geheimnis-Prüfung** | Gitleaks durchsucht die ganze Git-Historie nach API-Schlüsseln und Passwörtern |
+| **Docker-Images** | baut API- und UI-Image, nur wenn beide Prüfungen grün sind; auf `main` werden die Images in die GitHub Container Registry (`ghcr.io/alidlaimi/rag-assistent-api`, `…-ui`) veröffentlicht |
+
+Das automatisierte Deployment endet bewusst bei veröffentlichten, versionierten Images
+(Tag = Commit-Hash): Sie lassen sich auf jedem Server mit Docker starten. Eine Ziel-Infrastruktur
+(z.B. ein Kubernetes-Cluster) ist nicht Teil dieses Portfolio-Projekts.
 
 ## Leitplanken
 

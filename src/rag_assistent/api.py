@@ -4,12 +4,13 @@ Start:  uvicorn rag_assistent.api:app --reload
 Doku:   http://localhost:8000/docs  (automatisch erzeugt, im Browser ausprobierbar)
 """
 import logging
+import time
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from rag_assistent import agent, rag
+from rag_assistent import agent, protokoll, rag
 from rag_assistent.db import get_connection
 from rag_assistent.rag import Answer
 
@@ -111,12 +112,23 @@ def health() -> dict:
 
 @app.post("/ask", response_model=AntwortOut)
 def ask(req: FrageIn) -> AntwortOut:
-    """Stellt eine Frage an den Assistenten."""
+    """Stellt eine Frage an den Assistenten. Jede Anfrage wird protokolliert (ohne Fragetext)."""
+    modus = "agent" if req.agent else "rag"
+    start = time.perf_counter()
     try:
         a = agent.run(req.frage) if req.agent else rag.answer(req.frage)
     except Exception as exc:
         # Keine internen Details nach aussen geben; vollständig ins Log schreiben
         log.exception("Fehler bei der Beantwortung")
+        protokoll.schreibe(protokoll.eintrag(req.frage, modus, dauer_s=time.perf_counter() - start,
+                                             fehler=exc))
         raise HTTPException(status_code=502, detail="Die Anfrage konnte nicht beantwortet "
                             "werden. Bitte später erneut versuchen.") from exc
+    protokoll.schreibe(protokoll.eintrag(req.frage, modus, a, dauer_s=time.perf_counter() - start))
     return to_out(a)
+
+
+@app.get("/statistik")
+def statistik(tage: int = Query(30, ge=1, le=365)) -> dict:
+    """Nutzung, Kosten und Antwortzeiten für das Monitoring-Dashboard."""
+    return protokoll.statistik(tage)

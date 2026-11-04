@@ -34,6 +34,7 @@ FastAPI, Streamlit, pytest, Docker / docker-compose, GitHub Actions.
 - Datenbank: `docker compose up -d`; Prüfung: `python scripts/check_setup.py`.
 - Dokumente laden: `python scripts/download_docs.py`; einlesen: `python scripts/ingest.py`.
 - API: `uvicorn rag_assistent.api:app --reload`; Chat: `streamlit run ui/Chat.py`.
+- Testset: `python scripts/evaluate.py --nur-suche` (gratis) bzw. ohne Flag (kostet ca. USD 0.60).
 - Tests: `pytest` – müssen vor jedem Commit grün sein.
 
 ## Projektstruktur

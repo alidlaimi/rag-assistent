@@ -27,7 +27,7 @@ Assistent das, statt zu raten.
 | 4 | Agent-Werkzeuge (Tool-Calling) | ✅ |
 | 5 | FastAPI + Streamlit-Chat | ✅ |
 | 6 | Testset + Auswertung | ✅ |
-| 7 | Monitoring (Protokoll + Dashboard) | ⏳ |
+| 7 | Monitoring (Protokoll + Dashboard) | ✅ |
 | 8 | Leitplanken Datenschutz | ⏳ |
 | 9 | GitHub Actions (Tests, Docker-Image) | ⏳ |
 | 10 | Dokumentation | ⏳ |
@@ -78,12 +78,31 @@ Karfreitag 3.4.2026 → verschoben über Samstag, Sonntag und Ostermontag auf **
 |---|---|
 | `POST /ask` | Frage stellen; Antwort mit Quellen (Link direkt auf die PDF-Seite), Werkzeugaufrufen, Gesuchsentwurf, Tokens und Dauer |
 | `GET /health` | Zustand von API und Datenbank (für Docker und Monitoring) |
+| `GET /statistik?tage=30` | Kennzahlen für das Monitoring-Dashboard |
 | `GET /docs` | Automatisch erzeugte, interaktive API-Dokumentation |
 
 Die Streamlit-Oberfläche spricht ausschliesslich über die API – Oberfläche und Logik sind
 getrennt und laufen später als eigene Container. Das Embedding-Modell wird beim Start der API
 einmal geladen; Fragen ohne Modellaufruf werden dadurch in unter einer Sekunde beantwortet.
 Interne Fehlerdetails gehen ins Log, nie an die Nutzenden.
+
+## Monitoring
+
+Jede Anfrage über die API landet in der Tabelle `anfragen`: Zeitpunkt, Modus, Status
+(beantwortet / abgelehnt / Fehler), Modell, Tokens, Kosten, Dauer, bester Suchtreffer,
+zitierte Fundstellen, genutzte Werkzeuge, Anzahl ungültiger Zitate. Das Dashboard
+(Streamlit-Seite „Monitoring“) zeigt Anfragen und Kosten pro Tag, Antwortzeiten (Median, 95 %),
+Ablehnungsquote, meistzitierte Dokumente und Werkzeugnutzung.
+
+**Datenschutz im Protokoll:** Die Frage wird **nicht im Klartext** gespeichert, nur ihre Länge
+und eine Prüfsumme (HMAC-SHA256 mit geheimem Salt aus `.env`). Wiederholte Fragen lassen sich
+zählen, der Inhalt ist nicht rekonstruierbar; ohne geheimen Salt liessen sich häufige Fragen
+durch Ausprobieren erraten. Von Werkzeugaufrufen werden nur die Namen gespeichert, nicht die
+Eingaben. Fehler werden nur als Fehlerklasse protokolliert. Ein Fehler beim Protokollieren
+verhindert nie die Antwort.
+
+Bewusster Zielkonflikt: Ohne Klartext lässt sich nicht auswerten, *welche Themen* gefragt
+werden. Für eine Verwaltung wiegt Datensparsamkeit schwerer.
 
 ## Testergebnisse
 

@@ -55,6 +55,7 @@ class Settings:
     pg_db: str
     pg_host: str
     pg_port: int
+    protokoll_salt: str = field(default="", repr=False)
 
     def db_params(self) -> dict:
         """Verbindungsparameter für psycopg.connect(**params)."""
@@ -77,4 +78,5 @@ def get_settings() -> Settings:
         pg_db=os.getenv("POSTGRES_DB", "rag"),
         pg_host=os.getenv("POSTGRES_HOST", "localhost"),
         pg_port=int(os.getenv("POSTGRES_PORT", "5432")),
+        protokoll_salt=os.getenv("PROTOKOLL_SALT", ""),
     )

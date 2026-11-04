@@ -67,7 +67,7 @@ with st.sidebar:
     mit_agent = st.toggle("Agent-Werkzeuge (Fristen, Gesuche)", value=True)
     st.subheader("Beispielfragen")
     for b in BEISPIELE:
-        if st.button(b, use_container_width=True):
+        if st.button(b, width="stretch"):
             st.session_state.vorgabe = b
     st.divider()
     st.caption("⚠️ Keine Rechtsberatung. Massgebend sind die Originaldokumente und die "
@@ -100,6 +100,8 @@ if frage:
             antwort_anzeigen(daten, len(st.session_state.verlauf))
             st.session_state.verlauf.append({"rolle": "assistant", "daten": daten})
         except requests.ConnectionError:
+            st.session_state.verlauf.pop()  # unbeantwortete Frage nicht im Verlauf behalten
             st.error(f"Die API ist nicht erreichbar ({API_URL}). Läuft `uvicorn rag_assistent.api:app`?")
         except requests.HTTPError as exc:
+            st.session_state.verlauf.pop()
             st.error(f"Fehler der API: {exc.response.status_code} – {exc.response.json().get('detail')}")

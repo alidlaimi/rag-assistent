@@ -7,8 +7,8 @@ Seite, damit die Quellenangabe (Dokument + Seite) immer exakt ist.
 import re
 from dataclasses import dataclass
 
-MAX_CHARS = 1000   # ca. 250–350 Tokens: passt sicher ins Modell (max. 512 Tokens)
-OVERLAP = 200      # Überlappung, damit ein Satz an der Grenze nicht verloren geht
+from rag_assistent.config import CHUNK_MAX_ZEICHEN as MAX_CHARS
+from rag_assistent.config import CHUNK_UEBERLAPPUNG as OVERLAP
 
 
 @dataclass(frozen=True)

@@ -1,0 +1,205 @@
+# Testset für den RAG-Assistenten
+#
+# Jede Erwartung ist im Originaltext belegt (Dokument-ID aus data/sources.csv + Seite).
+# Felder:
+#   kategorie   fakt | frist | rueckfrage | nicht_in_dokumenten | ausserhalb
+#   quellen     akzeptierte Fundstellen (eine davon muss gefunden bzw. zitiert werden)
+#   muss        Regex (ohne Gross-/Kleinschreibung), die alle in der Antwort vorkommen müssen
+#   darf_nicht  Regex, die nicht vorkommen dürfen (bekannte Fehlantworten)
+#   werkzeug    Werkzeug, das der Agent aufrufen muss
+#   kein_werkzeug  Werkzeug, das der Agent NICHT aufrufen darf
+
+# ---------------- Fakten: ZHdK Rahmenordnung (RO) ----------------
+- id: ro-bachelor-hoechstdauer
+  kategorie: fakt
+  frage: Wie viele Semester darf ein Bachelorstudium an der ZHdK höchstens dauern?
+  quellen: [{dok: zhdk-ro, seite: 2}, {dok: zhdk-aso, seite: 3}]
+  muss: ["(10|zehn) Semester"]
+  darf_nicht: ["keine (generelle|verbindliche|allgemeine) Höchst"]
+  notiz: Bekannter schwieriger Fall aus Meilenstein 3 (RO S. 2 wurde nicht gefunden).
+
+- id: ro-master-hoechstdauer
+  kategorie: fakt
+  frage: Wie lange darf ein Masterstudium an der ZHdK höchstens dauern?
+  quellen: [{dok: zhdk-ro, seite: 2}]
+  muss: ["(8|acht) Semester"]
+
+- id: ro-rekursfrist
+  kategorie: fakt
+  frage: Innert welcher Frist kann ich gegen einen Entscheid der ZHdK Rekurs einlegen?
+  quellen: [{dok: zhdk-ro, seite: 15}, {dok: zh-vrg, seite: 10}]
+  muss: ["30 Tage"]
+
+- id: ro-einsprache-zulassung
+  kategorie: fakt
+  frage: Was kann ich tun, wenn ich mit einem Zulassungsentscheid der ZHdK nicht einverstanden bin?
+  quellen: [{dok: zhdk-ro, seite: 15}]
+  muss: ["Einsprache", "Departementsleitung", "30 Tage"]
+
+- id: ro-urlaub-dauer
+  kategorie: fakt
+  frage: Wie lange kann ich an der ZHdK Urlaub vom Studium nehmen?
+  quellen: [{dok: zhdk-ro, seite: 11}]
+  muss: ["zwei Semester"]
+
+- id: ro-urlaub-gebuehren
+  kategorie: fakt
+  frage: Muss ich während eines Urlaubssemesters an der ZHdK Studiengebühren bezahlen?
+  quellen: [{dok: zhdk-ro, seite: 11}]
+  muss: ["befreit"]
+
+- id: ro-unterbruch
+  kategorie: fakt
+  frage: Werden meine Studienleistungen angerechnet, wenn ich das Studium an der ZHdK unterbreche und später wieder einsteige?
+  quellen: [{dok: zhdk-ro, seite: 11}]
+  muss: ["vier"]
+
+- id: ro-credits-semester
+  kategorie: fakt
+  frage: Für wie viele Credits kann ich mich pro Semester höchstens einschreiben?
+  quellen: [{dok: zhdk-ro, seite: 5}]
+  muss: ["36"]
+
+- id: ro-credit-stunden
+  kategorie: fakt
+  frage: Wie vielen Arbeitsstunden entspricht ein Credit an der ZHdK?
+  quellen: [{dok: zhdk-ro, seite: 5}]
+  muss: ["25", "30"]
+
+- id: ro-anwesenheit
+  kategorie: fakt
+  frage: Wie viel Anwesenheit ist nötig, damit ich für ein Modul Credits erhalte?
+  quellen: [{dok: zhdk-ro, seite: 5}]
+  muss: ["80"]
+
+- id: ro-wiederholung
+  kategorie: fakt
+  frage: Wie oft darf ich ein nicht bestandenes Pflichtmodul wiederholen?
+  quellen: [{dok: zhdk-ro, seite: 10}]
+  muss: ["einmal"]
+
+- id: ro-minor-beginn
+  kategorie: fakt
+  frage: Ab welchem Semester kann ich im Bachelorstudium ein Minor belegen?
+  quellen: [{dok: zhdk-ro, seite: 3}]
+  muss: ["dritten"]
+
+# ---------------- Fakten: weitere ZHdK-Dokumente ----------------
+- id: minor-anzahl
+  kategorie: fakt
+  frage: Wie viele Minors kann ich bei der Minor-Anmeldung höchstens angeben?
+  quellen: [{dok: zhdk-minor, seite: 1}]
+  muss: ["(fünf|5)"]
+
+- id: nachteil-frist
+  kategorie: fakt
+  frage: Bis wann muss ich ein Gesuch um Nachteilsausgleich für das Herbstsemester einreichen?
+  quellen: [{dok: zhdk-nachteilsausgleich, seite: 1}]
+  muss: ["Ende Juni"]
+
+- id: nachteil-zeugnis
+  kategorie: fakt
+  frage: Wie alt darf das ärztliche Zeugnis für ein Gesuch um Nachteilsausgleich höchstens sein?
+  quellen: [{dok: zhdk-nachteilsausgleich, seite: 1}]
+  muss: ["(ein|einem|1) Jahr"]
+
+- id: erlass-beginn
+  kategorie: fakt
+  frage: Ab welchem Semester kann ich einen Erlass der Studiengebühren beantragen?
+  quellen: [{dok: zhdk-gebuehrenerlass, seite: 1}]
+  muss: ["zweiten"]
+
+- id: erlass-dauer
+  kategorie: fakt
+  frage: Für wie lange wird ein Erlass der Studiengebühren gewährt?
+  quellen: [{dok: zhdk-gebuehrenerlass, seite: 1}]
+  muss: ["zwei Semester"]
+
+- id: ki-abschlussarbeit
+  kategorie: fakt
+  frage: Darf ich KI-Tools für meine Abschlussarbeit an der ZHdK verwenden?
+  quellen: [{dok: zhdk-ki, seite: 2}]
+  muss: ["deklar"]
+
+- id: ki-personendaten
+  kategorie: fakt
+  frage: Darf ich Personendaten in ein KI-Tool eingeben?
+  quellen: [{dok: zhdk-ki, seite: 2}]
+  muss: ["(anonymisier|Einwilligung)"]
+
+# ---------------- Fakten: Kanton Zürich ----------------
+- id: gvf-semestergebuehr
+  kategorie: fakt
+  frage: Wie hoch ist die Studiengebühr pro Semester für ein Bachelorstudium an einer Zürcher Fachhochschule?
+  quellen: [{dok: zh-studiengebuehren, seite: 1}, {dok: zhdk-lebenskosten, seite: 1}]
+  muss: ["(720|787)"]
+  notiz: GVF § 4 nennt Fr. 720; das ZHdK-Merkblatt nennt CHF 787 (inkl. weiterer Gebühren). Beides belegt.
+
+- id: gvf-auslaendisch
+  kategorie: fakt
+  frage: Wie hoch ist die zusätzliche Semestergebühr für ausländische Studierende ohne Wohnsitz in der Schweiz?
+  quellen: [{dok: zh-studiengebuehren, seite: 2}, {dok: zhdk-gebuehrenerlass, seite: 1}]
+  muss: ["500"]
+
+- id: steuer-frist
+  kategorie: fakt
+  frage: Bis wann muss ich die Steuererklärung 2025 im Kanton Zürich einreichen?
+  quellen: [{dok: zh-wegleitung-steuer, seite: 7}]
+  muss: ["(31\\. ?März 2026|31\\.03\\.2026)"]
+
+- id: steuer-mahnfrist
+  kategorie: fakt
+  frage: Kann ich eine Mahnfrist für die Steuererklärung erstrecken lassen?
+  quellen: [{dok: zh-wegleitung-steuer, seite: 7}]
+  muss: ["nicht (erstreckbar|erstreckt|verlängert)"]
+
+- id: vrg-mitteilungstag
+  kategorie: fakt
+  frage: Zählt der Tag, an dem mir ein Entscheid mitgeteilt wird, bei der Fristberechnung mit?
+  quellen: [{dok: zh-vrg, seite: 5}]
+  muss: ["(nicht mitgezählt|zählt nicht|nicht mit)"]
+
+# ---------------- Fristen (Agent) ----------------
+- id: frist-ostern
+  kategorie: frist
+  frage: Ich habe den Entscheid der ZHdK am 4. März 2026 erhalten. Bis wann kann ich Rekurs einlegen?
+  quellen: [{dok: zhdk-ro, seite: 15}, {dok: zh-vrg, seite: 10}]
+  muss: ["(0?7\\. ?April 2026|07\\.04\\.2026)"]
+  werkzeug: frist_berechnen
+  notiz: Rechnerisches Ende Karfreitag 3.4.2026 -> Sa, So, Ostermontag -> Di 7.4.2026 (VRG § 11).
+
+- id: frist-weihnachten
+  kategorie: frist
+  frage: Ein Entscheid der ZHdK wurde mir am 25. November 2026 mitgeteilt. Bis wann läuft die Rekursfrist?
+  quellen: [{dok: zhdk-ro, seite: 15}, {dok: zh-vrg, seite: 10}]
+  muss: ["(28\\. ?Dezember 2026|28\\.12\\.2026)"]
+  werkzeug: frist_berechnen
+  notiz: Rechnerisches Ende Fr 25.12. (Weihnachtstag) -> Stephanstag (Sa) -> So -> Mo 28.12.2026.
+
+- id: frist-ohne-datum
+  kategorie: rueckfrage
+  frage: Wann läuft meine Rekursfrist gegen den Entscheid der ZHdK ab?
+  quellen: []
+  muss: ["Datum"]
+  kein_werkzeug: frist_berechnen
+  notiz: Ohne Mitteilungsdatum muss der Agent nachfragen statt zu raten.
+
+# ---------------- Nicht in den Dokumenten ----------------
+- id: nid-anmeldeschluss
+  kategorie: nicht_in_dokumenten
+  frage: Wann ist der Anmeldeschluss für den Bachelor Design an der ZHdK im Jahr 2027?
+  quellen: []
+  muss: []
+
+- id: nid-stipendium
+  kategorie: nicht_in_dokumenten
+  frage: Wie hoch ist das maximale Stipendium im Kanton Zürich pro Jahr?
+  quellen: []
+  muss: []
+
+# ---------------- Ausserhalb des Themas ----------------
+- id: ausserhalb-wetter
+  kategorie: ausserhalb
+  frage: Wie wird das Wetter morgen in Zürich?
+  quellen: []
+  muss: []

@@ -1,0 +1,94 @@
+{
+  "meta": {
+    "zeitpunkt": "2026-11-04T12:29:25",
+    "modus": "Agent",
+    "label": "",
+    "modell": "claude-sonnet-5-5",
+    "top_k": 6,
+    "chunking": "800/150",
+    "anzahl_faelle": 5
+  },
+  "kennzahlen": {
+    "Quellen-Trefferquote (Suche)": "5/5 (100 %)",
+    "Zitiergenauigkeit": "5/5 (100 %)",
+    "Antwortqualität (alle Pflichtbegriffe)": "5/5 (100 %)",
+    "Korrekte Ablehnung": "–",
+    "Werkzeugnutzung korrekt": "–",
+    "Halluzinationen": "0 von 5",
+    "Bestanden gesamt": "5/5 (100 %)",
+    "Kosten gesamt / pro Frage": "USD 0.151 / 0.0302",
+    "Dauer Median": "8.2 s"
+  },
+  "faelle": [
+    {
+      "id": "ro-bachelor-hoechstdauer",
+      "kategorie": "fakt",
+      "quelle_gefunden": true,
+      "quelle_zitiert": true,
+      "fakten": 1.0,
+      "fehlende": [],
+      "halluzination": [],
+      "werkzeug_ok": null,
+      "modellaufruf": true,
+      "kosten_usd": 0.031188,
+      "dauer_s": 18.40509519999614,
+      "antwort": "Die Antwort hängt von Ihrem Studienbeginn und von Ihrer Studienordnung ab.\n\n- **Rahmenordnung (RO) § 5:** Der Bachelorstudiengang umfasst 180 Credits. Das entspricht einer Regelstudiendauer von 6 Semestern. Die Studiendauer kann auf höchstens 10 Semester verlängert werden [7].\n- **Strengere Vorgabe in der Studienordnung:** Die jeweilige Studienordnung kann eine Höchststudiendauer von 8 Semestern für den Bachelorstudiengang festlegen [3]. Ob Ihre Studienordnung das tut, steht in den Auszügen nicht. Prüfen Sie daher Ihre Studienordnung.\n- **Bisheriges Recht (ASO § 11):** Wenn Sie Ihr Bachelorstudium vor HS 2023 begonnen haben, gilt die alte Allgemeine Studienordnung [1]. Danach ist das Bachelorstudium in mindestens sechs bis maximal zehn Semestern zu absolvieren [8].\n\nDie Höchstdauer beträgt somit grundsätzlich 10 Semester. Eine Studienordnung kann sie auf 8 Semester begrenzen."
+    },
+    {
+      "id": "ro-bachelor-hoechstdauer",
+      "kategorie": "fakt",
+      "quelle_gefunden": true,
+      "quelle_zitiert": true,
+      "fakten": 1.0,
+      "fehlende": [],
+      "halluzination": [],
+      "werkzeug_ok": null,
+      "modellaufruf": true,
+      "kosten_usd": 0.029666,
+      "dauer_s": 7.297097699993174,
+      "antwort": "Die Antwort hängt vom Studiengang und vom Zeitpunkt des Studienbeginns ab.\n\n- **Rahmenordnung (RO) § 5 Abs. 1:** Ein Bachelorstudiengang umfasst 180 Credits. Das entspricht einer Regelstudiendauer von 6 Semestern. Die Studiendauer kann auf höchstens 10 Semester verlängert werden [7].\n- **Engere Grenze in der Studienordnung:** Die jeweilige Studienordnung kann für den Bachelorstudiengang eine Höchststudiendauer von 8 Semestern festlegen [3]. Ob dies für Ihren Studiengang gilt, steht in den gefundenen Auszügen nicht. Dafür müssten Sie die Studienordnung Ihres Studiengangs ansehen.\n- **Bisheriges Recht:** Die Allgemeine Studienordnung (ASO) gilt nur bei Studienbeginn im Bachelor vor HS 2023. Sie verlangt, das Bachelorstudium in mindestens sechs bis maximal zehn Semestern zu absolvieren [9][1].\n\nDie Obergrenze beträgt somit grundsätzlich 10 Semester. Die Studienordnung des Studiengangs kann sie auf 8 Semester senken."
+    },
+    {
+      "id": "ro-bachelor-hoechstdauer",
+      "kategorie": "fakt",
+      "quelle_gefunden": true,
+      "quelle_zitiert": true,
+      "fakten": 1.0,
+      "fehlende": [],
+      "halluzination": [],
+      "werkzeug_ok": null,
+      "modellaufruf": true,
+      "kosten_usd": 0.029746,
+      "dauer_s": 8.746002799991402,
+      "antwort": "Nach der Rahmenordnung (RO) kann die Studiendauer eines Bachelorstudiengangs von der Regelstudiendauer von 6 Semestern auf höchstens 10 Semester verlängert werden [7]. Die Rahmenordnung nennt zudem eine zweite Zahl: Die jeweilige Studienordnung kann eine Höchststudiendauer von 8 Semestern für den Bachelorstudiengang festlegen [3]. Eine Studienordnung kann die Höchstdauer also unter die 10 Semester setzen. Welche Grenze für Sie gilt, steht in der Studienordnung Ihres Studiengangs. Diese liegt mir nicht vor.\n\nDie Allgemeine Studienordnung (ASO) ist altes Recht. Sie gilt nur bei Studienbeginn im Bachelor vor HS 2023 [1]. Sie sieht ein Bachelorstudium von mindestens sechs bis maximal zehn Semestern vor [9].\n\nZusammengefasst gelten höchstens 10 Semester, wenn Ihre Studienordnung keine kürzere Höchstdauer festlegt. Legt sie 8 Semester fest, gilt diese Grenze."
+    },
+    {
+      "id": "ro-bachelor-hoechstdauer",
+      "kategorie": "fakt",
+      "quelle_gefunden": true,
+      "quelle_zitiert": true,
+      "fakten": 1.0,
+      "fehlende": [],
+      "halluzination": [],
+      "werkzeug_ok": null,
+      "modellaufruf": true,
+      "kosten_usd": 0.029716,
+      "dauer_s": 7.190587100005359,
+      "antwort": "Nach der Rahmenordnung (RO) darf ein Bachelorstudium höchstens 10 Semester dauern. Es hat 180 Credits und eine Regelstudiendauer von 6 Semestern. Die Studiendauer kann auf höchstens 10 Semester verlängert werden (RO § 5 Abs. 1) [7].\n\nEine Einschränkung gibt es: Die jeweilige Studienordnung kann eine Höchststudiendauer von 8 Semestern für den Bachelorstudiengang festlegen [3]. Für Ihren Studiengang kann also eine kürzere Grenze gelten. Das müssten Sie in dessen Studienordnung nachprüfen.\n\nFür Studierende mit Studienbeginn im Bachelor vor HS 2023 gilt noch die alte Allgemeine Studienordnung. Danach ist das Bachelorstudium «in mindestens sechs bis maximal zehn Semestern zu absolvieren» (ASO § 11 Abs. 1) [9]. Dass dieses bisherige Recht nur für diese Studierenden gilt, steht im Titel des Dokuments [1][9]."
+    },
+    {
+      "id": "ro-bachelor-hoechstdauer",
+      "kategorie": "fakt",
+      "quelle_gefunden": true,
+      "quelle_zitiert": true,
+      "fakten": 1.0,
+      "fehlende": [],
+      "halluzination": [],
+      "werkzeug_ok": null,
+      "modellaufruf": true,
+      "kosten_usd": 0.030918,
+      "dauer_s": 8.196556400012923,
+      "antwort": "Die Auszüge nennen je nach Regelung eine andere Höchstdauer:\n\n- **Rahmenordnung (RO) § 5:** Ein Bachelorstudium hat eine Regelstudiendauer von 6 Semestern. Die Studiendauer kann auf höchstens 10 Semester verlängert werden [7].\n- **Abweichung durch die Studienordnung:** Die jeweilige Studienordnung kann eine Höchststudiendauer von 8 Semestern für den Bachelorstudiengang festlegen [3]. Ob Ihre Studienordnung das tut, steht in den gefundenen Auszügen nicht.\n- **Bisherige Allgemeine Studienordnung (ASO) § 11:** Das Bachelorstudium ist in mindestens sechs bis maximal zehn Semestern zu absolvieren [8]. Diese Regel gilt nur bei Studienbeginn im Bachelor vor HS 2023 [1].\n\nDie Obergrenze beträgt somit grundsätzlich 10 Semester. Sie kann in der Studienordnung Ihres Studiengangs auf 8 Semester verkürzt sein. Prüfen Sie dort die konkrete Höchststudiendauer."
+    }
+  ]
+}

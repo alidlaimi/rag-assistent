@@ -17,6 +17,11 @@ load_dotenv()
 EMBEDDING_MODEL = "intfloat/multilingual-e5-small"
 EMBEDDING_DIM = 384
 
+# Chunking – nach einer Änderung muss scripts/ingest.py neu laufen
+# Über Umgebungsvariablen überschreibbar, damit sich Varianten ohne Codeänderung messen lassen.
+CHUNK_MAX_ZEICHEN = int(os.getenv("CHUNK_MAX_ZEICHEN", "800"))   # gemessen besser als 600 und 1000 (eval/)
+CHUNK_UEBERLAPPUNG = int(os.getenv("CHUNK_UEBERLAPPUNG", "150"))  # Satz an der Grenze nicht verlieren
+
 # Suche (Retrieval) – hybrid: Bedeutung (Vektor) + Stichwörter (Volltext)
 TOP_K = 6               # so viele Abschnitte bekommt das Modell als Kontext
 MAX_PRO_DOKUMENT = 3    # verhindert, dass ein grosses Dokument alle Plätze belegt
@@ -24,6 +29,20 @@ KANDIDATEN = 40         # so viele Treffer liefert jede der beiden Suchen vor de
 RRF_K = 60              # Glättungskonstante der Reciprocal Rank Fusion (Standardwert)
 MIN_SCORE = 0.84        # Mindest-Ähnlichkeit des besten Treffers; kalibriert am 3.11.2026:
                         # Fragen aus den Dokumenten 0.88–0.90, fremde Fragen 0.79–0.80
+
+# Listenpreise Anthropic in USD pro 1 Mio. Tokens (Input, Output), Stand November 2026,
+# Quelle: https://platform.claude.com/docs/en/about-claude/pricing
+PREISE_USD = {
+    "claude-sonnet-5-5": (2.00, 10.00),
+    "claude-haiku-5-5": (0.10, 0.50),   # gilt für Anfragen bis 100'000 Tokens
+    "claude-opus-5-5": (4.00, 20.00),
+}
+
+
+def kosten_usd(modell: str, input_tokens: int, output_tokens: int) -> float:
+    """Kosten einer Anfrage in USD; unbekanntes Modell -> 0 (wird im Bericht sichtbar)."""
+    preis_in, preis_out = PREISE_USD.get(modell, (0.0, 0.0))
+    return (input_tokens * preis_in + output_tokens * preis_out) / 1_000_000
 
 
 @dataclass(frozen=True)

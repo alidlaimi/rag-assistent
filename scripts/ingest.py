@@ -22,9 +22,19 @@ def main() -> int:
     start = time.perf_counter()
     total_chunks = 0
 
+    sources = load_sources()
     with get_connection() as conn:
         register_vector(conn)  # erlaubt, numpy-Vektoren direkt zu speichern
-        for src in load_sources():
+
+        # Dokumente entfernen, die nicht mehr in der Quellenliste stehen
+        entfernt = conn.execute(
+            "DELETE FROM documents WHERE source_id <> ALL(%s) RETURNING source_id",
+            ([s.id for s in sources],),
+        ).fetchall()
+        for (source_id,) in entfernt:
+            print(f"ENTFERNT {source_id} (nicht mehr in sources.csv)")
+
+        for src in sources:
             if not src.pfad.exists():
                 print(f"FEHLT   {src.id}: zuerst scripts/download_docs.py ausführen")
                 continue

@@ -26,7 +26,7 @@ Assistent das, statt zu raten.
 | 3 | Suche + Antwort mit Quellenangabe | ✅ |
 | 4 | Agent-Werkzeuge (Tool-Calling) | ✅ |
 | 5 | FastAPI + Streamlit-Chat | ✅ |
-| 6 | Testset + Auswertung | ⏳ |
+| 6 | Testset + Auswertung | ✅ |
 | 7 | Monitoring (Protokoll + Dashboard) | ⏳ |
 | 8 | Leitplanken Datenschutz | ⏳ |
 | 9 | GitHub Actions (Tests, Docker-Image) | ⏳ |
@@ -85,6 +85,48 @@ getrennt und laufen später als eigene Container. Das Embedding-Modell wird beim
 einmal geladen; Fragen ohne Modellaufruf werden dadurch in unter einer Sekunde beantwortet.
 Interne Fehlerdetails gehen ins Log, nie an die Nutzenden.
 
+## Testergebnisse
+
+Testset: [`eval/testset.yaml`](eval/testset.yaml) – 30 Fragen, jede Erwartung mit Dokument und
+Seite belegt (ein Test prüft automatisch, dass die Pflichtbegriffe auf der angegebenen PDF-Seite
+stehen). Bewertung regelbasiert statt „Modell bewertet Modell“: nachvollziehbar, reproduzierbar,
+kostenlos. Letzter Bericht: [`eval/bericht.md`](eval/bericht.md), alle Läufe: [`eval/ergebnisse/`](eval/ergebnisse/).
+
+| Kategorie | Fälle | Geprüft |
+|---|---|---|
+| Fakten | 24 | richtige Antwort (Pflichtbegriffe) und richtige Quelle (Dokument + Seite) |
+| Fristen | 2 | Fristenrechner genutzt, korrektes Datum über Feiertage (Ostern, Weihnachten 2026) |
+| Rückfrage | 1 | ohne Datum nachfragen, nicht rechnen |
+| Nicht in den Dokumenten | 2 | ablehnen statt erfinden |
+| Ausserhalb | 1 | kein Modellaufruf |
+
+**Ergebnis (4.11.2026, Claude Sonnet 5.5, Agent):**
+
+| Kennzahl | Wert |
+|---|---|
+| Bestanden | **30/30** |
+| Halluzinationen | **0/30** |
+| Quellen-Trefferquote / Zitiergenauigkeit | 26/26 / 26/26 |
+| Kosten | USD 0.64 gesamt, **≈ 2 Rappen pro Frage** |
+| Antwortzeit (Median) | 5.7 s |
+
+**Verlauf – was gemessen und geändert wurde:**
+
+| Lauf | Änderung | Bestanden | Erkenntnis |
+|---|---|---|---|
+| 1 | Ausgangslage (Chunks 1000/200) | 29/30 | Antwort zum Studienunterbruch stützte sich auf die alte ASO, ohne die geltende RO zu nennen |
+| – | Chunk-Grösse, nur Suche: 600 → 77 %, 800 → 88 %, 1000 → 85 % | – | Hypothese „kleiner ist besser“ widerlegt; 800/150 übernommen (Gewinn klein: 1 Fall) |
+| 2 | Chunks 800/150, ASO im Titel als bisheriges Recht markiert | 29/30 | Unterbruch korrekt (inkl. RO § 48); dafür Bachelor-Höchstdauer unvollständig – das Modell suchte nicht nach |
+| 3 | Regel „vor ‚steht nicht drin‘ gezielt nachsuchen“ | **30/30** | Bachelor-Fall zusätzlich **5/5 stabil** in Wiederholungsmessung |
+
+Der Agent gleicht Schwächen der Suche aus: Die reine Suche findet die richtige Seite in 88 %
+der Fälle, der Agent mit eigener Nachsuche in 100 %.
+
+**Grenzen der Aussage:** 30 Fragen sind eine kleine Stichprobe; Testset und System stammen von
+derselben Person; die Pflichtbegriff-Prüfung erkennt fehlende Fakten, aber nicht jede
+ungenaue Formulierung. Modellantworten schwanken – ein Fall bestand in Lauf 1 und fiel in
+Lauf 2 durch. Kritische Fälle werden deshalb mehrfach gemessen (`--wiederholen`).
+
 ## Architektur
 
 _Folgt mit Meilenstein 10 (Diagramm)._
@@ -103,6 +145,8 @@ python scripts/check_setup.py   # prüft Konfiguration und Datenbank
 python scripts/download_docs.py # lädt die PDFs gemäss data/sources.csv
 python scripts/ingest.py        # chunkt, berechnet Embeddings, speichert in pgvector
 python scripts/ask.py "Innert welcher Frist kann ich Rekurs einlegen?"
+python scripts/evaluate.py --nur-suche   # Testset, nur Suche (kostenlos)
+python scripts/evaluate.py               # Testset, vollständig (ca. USD 0.60)
 
 # Web: zwei Terminals
 uvicorn rag_assistent.api:app --reload   # API, Doku unter http://localhost:8000/docs
@@ -112,7 +156,7 @@ pytest
 
 ## Datenquellen
 
-13 öffentlich zugängliche Dokumente der Zürcher Hochschule der Künste (ZHdK) und des
+12 öffentlich zugängliche Dokumente der Zürcher Hochschule der Künste (ZHdK) und des
 Kantons Zürich – Reglemente, Studienordnungen, Merkblätter, Gesetz und Verordnung.
 Die vollständige Liste mit Herausgeber, Stand und URL steht in
 [`data/sources.csv`](data/sources.csv).
@@ -121,6 +165,10 @@ Die PDFs liegen bewusst **nicht** im Repository: Die Rechte bleiben bei den Hera
 und `scripts/download_docs.py` lädt den Bestand reproduzierbar herunter. Dabei prüft das
 Skript, ob jedes PDF eine Textebene hat (eingescannte Dokumente würden sonst unbemerkt
 leere Suchergebnisse liefern).
+
+Ein ursprünglich vorgesehenes Schreiben zu Stipendien wurde wieder entfernt: Es ist als
+„vertraulich“ klassifiziert und enthält Kontaktdaten einer Mitarbeiterin – auch wenn es
+öffentlich auffindbar war, gehört es nicht in den Datenbestand.
 
 ## Einlese-Pipeline
 

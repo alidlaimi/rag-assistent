@@ -1,6 +1,6 @@
 # Testergebnisse
 
-Lauf vom 2026-11-04T17:33:56 · Modus: Agent · Modell: claude-sonnet-5-5 · 30 Fälle · M8: Leitplanken (Personendaten-Filter, Prompt-Injection)
+Lauf vom 2026-11-04T18:47:19 · Modus: Agent · Modell: claude-sonnet-5-5 · 30 Fälle · Final: Fristenrechner mit VRG-Beleg
 
 | Kennzahl | Wert |
 |---|---|
@@ -12,8 +12,8 @@ Lauf vom 2026-11-04T17:33:56 · Modus: Agent · Modell: claude-sonnet-5-5 · 30 
 | Personendaten entfernt | 1/1 (100 %) |
 | Halluzinationen | 0 von 30 |
 | Bestanden gesamt | 30/30 (100 %) |
-| Kosten gesamt / pro Frage | USD 0.633 / 0.0218 |
-| Dauer Median | 5.8 s |
+| Kosten gesamt / pro Frage | USD 0.679 / 0.0234 |
+| Dauer Median | 6.4 s |
 
 | Fall | Kategorie | Quelle gefunden | Quelle zitiert | Pflichtbegriffe | Halluzination | Bestanden |
 |---|---|---|---|---|---|---|

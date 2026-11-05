@@ -25,6 +25,7 @@ from rag_assistent.tools.gesuch import gesuch_entwerfen
 MAX_SCHRITTE = 5
 FRISTREGEL_SUCHE = ("Fristberechnung Tag der Mitteilung nicht mitgezählt letzter Tag Samstag "
                     "öffentlicher Ruhetag nächster Werktag")
+FRISTREGEL_QUELLEN = ["zh-vrg"]   # die Fristregel steht im VRG – andere Dokumente liefern nur Rauschen
 
 TOOLS = [
     {
@@ -137,8 +138,8 @@ class _Lauf:
         self.hits: list[Hit] = list(hits)
         self.entwurf: str | None = None
 
-    def suchen(self, suchbegriff: str) -> str:
-        neu = [h for h in search(suchbegriff) if h.chunk_id not in {x.chunk_id for x in self.hits}]
+    def suchen(self, suchbegriff: str, quellen: list[str] | None = None) -> str:
+        neu = [h for h in search(suchbegriff, quellen=quellen) if h.chunk_id not in {x.chunk_id for x in self.hits}]
         if not neu:
             return "Keine weiteren Auszüge gefunden."
         start = len(self.hits) + 1
@@ -154,7 +155,7 @@ class _Lauf:
             titel = eingabe.get("fristart", "Frist")
             # Rechtsgrundlage der Berechnung (VRG § 11) als zitierbaren Auszug mitliefern,
             # damit die Verschiebungsregel belegt ist und nicht nur aus der Werkzeugbeschreibung stammt
-            beleg = self.suchen(FRISTREGEL_SUCHE)
+            beleg = self.suchen(FRISTREGEL_SUCHE, quellen=FRISTREGEL_QUELLEN)
             return (f"{titel}:\n{ergebnis.als_text()}\n\n"
                     f"Rechtsgrundlage der Berechnung (zum Zitieren, falls passend):\n{beleg}")
         if name == "gesuch_entwerfen":

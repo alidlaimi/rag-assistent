@@ -34,16 +34,23 @@ WITH q AS (
            -- Stichwörter mit ODER verknüpfen (Standard wäre UND, das findet selten etwas)
            to_tsquery('german', replace(plainto_tsquery('german', %(frage)s)::text, ' & ', ' | ')) AS t
 ),
+-- Optionaler Filter auf Dokumente: NULL = alle Dokumente durchsuchen
+erlaubt AS (
+    SELECT c.id
+    FROM chunks c JOIN documents d ON d.id = c.document_id
+    WHERE %(quellen)s::text[] IS NULL OR d.source_id = ANY(%(quellen)s::text[])
+),
 vektor AS (
     SELECT c.id, row_number() OVER (ORDER BY c.embedding <=> q.v) AS rang
     FROM chunks c, q
+    WHERE c.id IN (SELECT id FROM erlaubt)
     ORDER BY c.embedding <=> q.v
     LIMIT %(n)s
 ),
 volltext AS (
     SELECT c.id, row_number() OVER (ORDER BY ts_rank_cd(c.tsv, q.t) DESC) AS rang
     FROM chunks c, q
-    WHERE c.tsv @@ q.t
+    WHERE c.tsv @@ q.t AND c.id IN (SELECT id FROM erlaubt)
     ORDER BY ts_rank_cd(c.tsv, q.t) DESC
     LIMIT %(n)s
 ),
@@ -76,12 +83,17 @@ def diversify(hits: list[Hit], k: int = TOP_K, per_doc: int = MAX_PRO_DOKUMENT) 
 
 
 def search(frage: str, k: int = TOP_K, per_doc: int = MAX_PRO_DOKUMENT,
-           candidates: int = KANDIDATEN) -> list[Hit]:
-    """Sucht die passendsten Abschnitte zur Frage (hybrid, nach RRF sortiert)."""
+           candidates: int = KANDIDATEN, quellen: list[str] | None = None) -> list[Hit]:
+    """Sucht die passendsten Abschnitte zur Frage (hybrid, nach RRF sortiert).
+
+    `quellen` beschränkt die Suche auf diese Dokument-IDs (source_id), z.B. ["zh-vrg"].
+    Standard None: alle Dokumente.
+    """
     vec = embed_query(frage)
     with get_connection() as conn:
         register_vector(conn)
         rows = conn.execute(
-            HYBRID_SQL, {"vec": vec, "frage": frage, "n": candidates, "rrf_k": RRF_K}
+            HYBRID_SQL, {"vec": vec, "frage": frage, "n": candidates, "rrf_k": RRF_K,
+                         "quellen": quellen}
         ).fetchall()
     return diversify([Hit(*row) for row in rows], k, per_doc)

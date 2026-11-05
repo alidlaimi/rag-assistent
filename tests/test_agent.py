@@ -25,7 +25,7 @@ def tool(name, eingabe, id_="t1"):
 
 
 def test_fristfrage_ruft_fristenrechner_auf(monkeypatch):
-    monkeypatch.setattr(agent, "search", lambda frage: [hit(1)])
+    monkeypatch.setattr(agent, "search", lambda frage, **kw: [hit(1)])
     skript = iter([
         antwort(tool("frist_berechnen", {"datum": "2026-03-04", "dauer": 30, "einheit": "tage"}),
                 stop="tool_use"),
@@ -46,7 +46,7 @@ def test_fristfrage_ruft_fristenrechner_auf(monkeypatch):
 
 def test_weitere_suche_nummeriert_fortlaufend(monkeypatch):
     ergebnisse = iter([[hit(1)], [hit(1), hit(2)]])
-    monkeypatch.setattr(agent, "search", lambda frage: next(ergebnisse))
+    monkeypatch.setattr(agent, "search", lambda frage, **kw: next(ergebnisse))
     skript = iter([
         antwort(tool("dokumente_durchsuchen", {"suchbegriff": "Urlaub"}), stop="tool_use"),
         antwort(text("Siehe [2].")),
@@ -58,7 +58,7 @@ def test_weitere_suche_nummeriert_fortlaufend(monkeypatch):
 
 
 def test_werkzeugfehler_wird_zurueckgemeldet(monkeypatch):
-    monkeypatch.setattr(agent, "search", lambda frage: [hit(1)])
+    monkeypatch.setattr(agent, "search", lambda frage, **kw: [hit(1)])
     skript = iter([
         antwort(tool("frist_berechnen", {"datum": "3. März", "dauer": 30, "einheit": "tage"}),
                 stop="tool_use"),
@@ -70,7 +70,7 @@ def test_werkzeugfehler_wird_zurueckgemeldet(monkeypatch):
 
 
 def test_gesuch_wird_separat_zurueckgegeben(monkeypatch):
-    monkeypatch.setattr(agent, "search", lambda frage: [hit(1)])
+    monkeypatch.setattr(agent, "search", lambda frage, **kw: [hit(1)])
     eingabe = {"empfaenger": "ZHdK", "betreff": "Urlaub", "anliegen": "Ich beantrage Urlaub.",
                "begruendung": ["Militärdienst"], "rechtsgrundlagen": ["RO § 33"]}
     skript = iter([antwort(tool("gesuch_entwerfen", eingabe), stop="tool_use"),
@@ -81,13 +81,13 @@ def test_gesuch_wird_separat_zurueckgegeben(monkeypatch):
 
 
 def test_fremde_frage_ohne_modellaufruf(monkeypatch):
-    monkeypatch.setattr(agent, "search", lambda frage: [hit(1, score=0.5)])
+    monkeypatch.setattr(agent, "search", lambda frage, **kw: [hit(1, score=0.5)])
     monkeypatch.setattr(agent.llm, "create", lambda *a, **k: (_ for _ in ()).throw(AssertionError))
     assert agent.run("Wetter?").gefunden is False
 
 
 def test_letzter_schritt_erzwingt_antwort_ohne_werkzeug(monkeypatch):
-    monkeypatch.setattr(agent, "search", lambda frage: [hit(1)])
+    monkeypatch.setattr(agent, "search", lambda frage, **kw: [hit(1)])
     choices = []
 
     def fake(system, messages, tools=None, tool_choice=None, **kw):
@@ -103,7 +103,7 @@ def test_letzter_schritt_erzwingt_antwort_ohne_werkzeug(monkeypatch):
 
 def test_personendaten_erreichen_das_modell_nie(monkeypatch):
     gesucht = []
-    monkeypatch.setattr(agent, "search", lambda frage: gesucht.append(frage) or [hit(1)])
+    monkeypatch.setattr(agent, "search", lambda frage, **kw: gesucht.append(frage) or [hit(1)])
     gesendet = []
     monkeypatch.setattr(agent.llm, "create", lambda system, messages, **kw:
                         gesendet.append(str(messages)) or antwort(text("Zwei Semester [1].")))
@@ -120,8 +120,8 @@ def test_fristenrechner_liefert_zitierbare_rechtsgrundlage(monkeypatch):
               text="§ 11 Fristen", score=0.86)
     suchen = []
 
-    def suche(frage):
-        suchen.append(frage)
+    def suche(frage, quellen=None):
+        suchen.append((frage, quellen))
         return [hit(1)] if len(suchen) == 1 else [vrg]
 
     monkeypatch.setattr(agent, "search", suche)
@@ -132,6 +132,31 @@ def test_fristenrechner_liefert_zitierbare_rechtsgrundlage(monkeypatch):
     ])
     monkeypatch.setattr(agent.llm, "create", lambda system, messages, **kw: next(skript))
     a = agent.run("Frist?")
-    assert suchen[1] == agent.FRISTREGEL_SUCHE
+    assert suchen[1] == (agent.FRISTREGEL_SUCHE, ["zh-vrg"])   # Fristregel nur im VRG suchen
+    assert suchen[0][1] is None                               # Hauptsuche bleibt ungefiltert
     assert "[2] VRG, Seite 5" in a.werkzeuge[0].ergebnis
     assert [h.source_id for h in a.quellen] == ["doc1", "zh-vrg"]
+
+
+def test_nur_fristregel_suche_ist_auf_vrg_gefiltert(monkeypatch):
+    aufrufe = []   # (Frage, Keyword-Argumente) jedes Suchaufrufs
+
+    def suche(frage, **kw):
+        aufrufe.append((frage, kw))
+        return [hit(len(aufrufe))]
+
+    monkeypatch.setattr(agent, "search", suche)
+    skript = iter([
+        antwort(tool("dokumente_durchsuchen", {"suchbegriff": "Rekursfrist Tage"}, "t1"),
+                stop="tool_use"),
+        antwort(tool("frist_berechnen", {"datum": "2026-03-04", "dauer": 30, "einheit": "tage"},
+                     "t2"), stop="tool_use"),
+        antwort(text("Fristende 07.04.2026 [1].")),
+    ])
+    monkeypatch.setattr(agent.llm, "create", lambda system, messages, **kw: next(skript))
+    agent.run("Bis wann kann ich rekurrieren?")
+
+    fristregel = [kw for frage, kw in aufrufe if frage == agent.FRISTREGEL_SUCHE]
+    werkzeugsuche = [kw for frage, kw in aufrufe if frage == "Rekursfrist Tage"]
+    assert fristregel == [{"quellen": ["zh-vrg"]}]
+    assert len(werkzeugsuche) == 1 and werkzeugsuche[0].get("quellen") is None

@@ -235,7 +235,7 @@ pip install -e ".[dev]"
 python scripts/check_setup.py   # Konfiguration und Datenbank prüfen
 python scripts/download_docs.py # PDFs gemäss data/sources.csv laden (mit Textebenen-Prüfung)
 python scripts/ingest.py        # chunken, Embeddings berechnen, speichern
-pytest                          # 91 Tests
+pytest                          # 94 Tests
 
 # Web: zwei Terminals
 uvicorn rag_assistent.api:app --reload

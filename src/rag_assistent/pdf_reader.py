@@ -1,4 +1,5 @@
 """PDF-Text seitenweise auslesen."""
+
 import logging
 from pathlib import Path
 
@@ -16,4 +17,6 @@ def read_pdf(path: Path) -> list[tuple[int, str]]:
     Seitenweise, damit jede Antwort später die genaue Seite als Quelle nennen kann.
     """
     reader = PdfReader(str(path))
-    return [(nr, page.extract_text() or "") for nr, page in enumerate(reader.pages, start=1)]
+    return [
+        (nr, page.extract_text() or "") for nr, page in enumerate(reader.pages, start=1)
+    ]

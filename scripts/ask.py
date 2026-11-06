@@ -7,6 +7,7 @@ Aufruf:  python scripts/ask.py "Ich habe den Entscheid am 3. März erhalten. Bis
 --nur-suche   zeigt nur die gefundenen Abschnitte – ohne Claude, also kostenlos.
 --ohne-agent  einfaches RAG ohne Werkzeuge (Vergleich für das Testset).
 """
+
 import argparse
 import sys
 
@@ -20,17 +21,25 @@ def nur_suche(frage: str) -> None:
     hits = search(frage)
     bester = max((h.score for h in hits), default=0.0)
     entscheid = "Claude würde gefragt" if bester >= MIN_SCORE else "KEIN Modellaufruf"
-    print(f"Frage: {frage}\nBester Treffer {bester:.3f} / Schwelle {MIN_SCORE} -> {entscheid}\n")
+    print(
+        f"Frage: {frage}\nBester Treffer {bester:.3f} / Schwelle {MIN_SCORE} -> {entscheid}\n"
+    )
     for h in hits:
         vorschau = h.text[:110].replace("\n", " ")
-        print(f"  Ähnl. {h.score:.3f} · RRF {h.rrf:.4f}  {h.titel}, S. {h.seite}\n         {vorschau}…")
+        print(
+            f"  Ähnl. {h.score:.3f} · RRF {h.rrf:.4f}  {h.titel}, S. {h.seite}\n         {vorschau}…"
+        )
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="RAG-Assistent befragen")
     parser.add_argument("frage")
-    parser.add_argument("--nur-suche", action="store_true", help="nur Suche, kein Modellaufruf")
-    parser.add_argument("--ohne-agent", action="store_true", help="einfaches RAG ohne Werkzeuge")
+    parser.add_argument(
+        "--nur-suche", action="store_true", help="nur Suche, kein Modellaufruf"
+    )
+    parser.add_argument(
+        "--ohne-agent", action="store_true", help="einfaches RAG ohne Werkzeuge"
+    )
     args = parser.parse_args()
 
     if args.nur_suche:
@@ -46,17 +55,25 @@ def main() -> int:
         if w.name == "frist_berechnen":
             print("  " + w.ergebnis.replace("\n", "\n  "))
     if a.entwurf:
-        print("\n----- Gesuchsentwurf -----\n" + a.entwurf + "\n--------------------------")
+        print(
+            "\n----- Gesuchsentwurf -----\n"
+            + a.entwurf
+            + "\n--------------------------"
+        )
 
     if a.quellen:
         print("\nQuellen:")
         for i, h in enumerate(a.treffer, start=1):
             if h in a.quellen:
-                print(f"  [{i}] {h.titel}, Seite {h.seite}  (Ähnlichkeit {h.score:.2f})")
+                print(
+                    f"  [{i}] {h.titel}, Seite {h.seite}  (Ähnlichkeit {h.score:.2f})"
+                )
     if a.ungueltige_zitate:
         print(f"WARNUNG: Zitate ohne passenden Auszug: {a.ungueltige_zitate}")
     if a.modell:
-        print(f"\n{a.modell} · {a.input_tokens} Tokens rein / {a.output_tokens} raus · {a.dauer_s:.1f} s")
+        print(
+            f"\n{a.modell} · {a.input_tokens} Tokens rein / {a.output_tokens} raus · {a.dauer_s:.1f} s"
+        )
     else:
         print(f"\nKein Modellaufruf (keine relevanten Abschnitte) · {a.dauer_s:.1f} s")
     return 0

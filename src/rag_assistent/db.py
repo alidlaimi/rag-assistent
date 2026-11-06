@@ -1,4 +1,5 @@
 """Datenbankzugriff (PostgreSQL + pgvector)."""
+
 import psycopg
 
 from rag_assistent.config import EMBEDDING_DIM, get_settings

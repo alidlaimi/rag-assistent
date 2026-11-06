@@ -1,4 +1,5 @@
 """Prüft die Quellenliste auf Vollständigkeit und Konsistenz."""
+
 from rag_assistent.sources import load_sources
 
 

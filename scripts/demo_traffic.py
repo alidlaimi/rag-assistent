@@ -3,6 +3,7 @@
 Aufruf:  python scripts/demo_traffic.py --anzahl 10
 Kosten:  ca. 2 Rappen pro Frage mit Modellaufruf. Die API muss laufen.
 """
+
 import argparse
 import os
 import random

@@ -1,4 +1,5 @@
 """Retrieval-Augmented Generation: Suche + Antwort mit Quellenangabe."""
+
 import re
 import time
 from dataclasses import dataclass, field
@@ -35,22 +36,31 @@ höchstens etwa 150 Wörter.
 class Answer:
     frage: str
     antwort: str
-    gefunden: bool                                   # False = nichts Relevantes in den Dokumenten
-    treffer: list[Hit] = field(default_factory=list)  # alle Abschnitte, die das Modell sah
+    gefunden: bool  # False = nichts Relevantes in den Dokumenten
+    treffer: list[Hit] = field(
+        default_factory=list
+    )  # alle Abschnitte, die das Modell sah
     quellen: list[Hit] = field(default_factory=list)  # davon tatsächlich zitiert
-    ungueltige_zitate: list[int] = field(default_factory=list)  # zitierte Nummern ohne Auszug
+    ungueltige_zitate: list[int] = field(
+        default_factory=list
+    )  # zitierte Nummern ohne Auszug
     modell: str = ""
     input_tokens: int = 0
     output_tokens: int = 0
     dauer_s: float = 0.0
-    werkzeuge: list = field(default_factory=list)    # Werkzeugaufrufe des Agenten
-    entwurf: str | None = None                       # Gesuchsentwurf, falls erstellt
-    personendaten: list[str] = field(default_factory=list)  # Arten entfernter Personendaten
+    werkzeuge: list = field(default_factory=list)  # Werkzeugaufrufe des Agenten
+    entwurf: str | None = None  # Gesuchsentwurf, falls erstellt
+    personendaten: list[str] = field(
+        default_factory=list
+    )  # Arten entfernter Personendaten
 
 
 def build_context(hits: list[Hit], start: int = 1) -> str:
     """Nummerierte Auszüge, damit das Modell mit [n] zitieren kann."""
-    teile = [f"[{i}] {h.titel}, Seite {h.seite}\n{h.text}" for i, h in enumerate(hits, start=start)]
+    teile = [
+        f"[{i}] {h.titel}, Seite {h.seite}\n{h.text}"
+        for i, h in enumerate(hits, start=start)
+    ]
     return "<auszuege>\n" + "\n\n".join(teile) + "\n</auszuege>"
 
 
@@ -66,15 +76,22 @@ def extract_citations(text: str) -> list[int]:
 def answer(frage: str) -> Answer:
     start = time.perf_counter()
     original = frage
-    frage, personendaten = maskiere(frage)   # Leitplanke: keine Personendaten an das Modell
+    frage, personendaten = maskiere(
+        frage
+    )  # Leitplanke: keine Personendaten an das Modell
     hits = search(frage)
 
     # Leitplanke: Ist selbst der beste Treffer der Bedeutung nach zu weit weg, betrifft die
     # Frage die Dokumente nicht. Dann wird das Modell gar nicht gefragt – keine erfundene
     # Antwort, keine Kosten.
     if not hits or max(h.score for h in hits) < MIN_SCORE:
-        return Answer(frage=original, antwort=KEINE_ANTWORT, gefunden=False,
-                      dauer_s=time.perf_counter() - start, personendaten=personendaten)
+        return Answer(
+            frage=original,
+            antwort=KEINE_ANTWORT,
+            gefunden=False,
+            dauer_s=time.perf_counter() - start,
+            personendaten=personendaten,
+        )
 
     result = llm.complete(SYSTEM_PROMPT, f"{build_context(hits)}\n\nFrage: {frage}")
     zitate = extract_citations(result.text)

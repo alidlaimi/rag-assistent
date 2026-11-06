@@ -3,6 +3,7 @@
 Start:  uvicorn rag_assistent.api:app --reload
 Doku:   http://localhost:8000/docs  (automatisch erzeugt, im Browser ausprobierbar)
 """
+
 import logging
 import time
 from collections import defaultdict, deque
@@ -23,6 +24,7 @@ log = logging.getLogger("rag_assistent.api")
 async def lifespan(app: FastAPI):
     # Embedding-Modell einmal beim Start laden statt bei der ersten Frage
     from rag_assistent.embeddings import _model
+
     _model()
     log.info("Embedding-Modell geladen")
     yield
@@ -31,25 +33,32 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="RAG-Assistent für Verwaltungsdokumente",
     description="Beantwortet Fragen zu Reglementen, Weisungen und Merkblättern der ZHdK und "
-                "des Kantons Zürich mit Quellenangabe. Agent-Werkzeuge: Fristenrechner "
-                "(VRG § 11) und Gesuchsentwurf.",
+    "des Kantons Zürich mit Quellenangabe. Agent-Werkzeuge: Fristenrechner "
+    "(VRG § 11) und Gesuchsentwurf.",
     version="0.1.0",
     lifespan=lifespan,
 )
 
 
 class FrageIn(BaseModel):
-    frage: str = Field(min_length=3, max_length=1000,
-                       examples=["Ich habe den Entscheid am 4. März 2026 erhalten. "
-                                 "Bis wann kann ich Rekurs einlegen?"])
-    agent: bool = Field(True, description="Agent mit Werkzeugen (true) oder einfaches RAG (false)")
+    frage: str = Field(
+        min_length=3,
+        max_length=1000,
+        examples=[
+            "Ich habe den Entscheid am 4. März 2026 erhalten. "
+            "Bis wann kann ich Rekurs einlegen?"
+        ],
+    )
+    agent: bool = Field(
+        True, description="Agent mit Werkzeugen (true) oder einfaches RAG (false)"
+    )
 
 
 class QuelleOut(BaseModel):
     nr: int
     titel: str
     seite: int
-    url: str          # öffnet das PDF direkt auf der richtigen Seite
+    url: str  # öffnet das PDF direkt auf der richtigen Seite
     score: float
     zitiert: bool
     auszug: str
@@ -70,7 +79,7 @@ class AntwortOut(BaseModel):
     werkzeuge: list[WerkzeugOut]
     entwurf: str | None
     ungueltige_zitate: list[int]
-    personendaten: list[str]   # Arten der vor dem Modellaufruf entfernten Personendaten
+    personendaten: list[str]  # Arten der vor dem Modellaufruf entfernten Personendaten
     modell: str
     input_tokens: int
     output_tokens: int
@@ -83,11 +92,24 @@ def to_out(a: Answer) -> AntwortOut:
         frage=a.frage,
         antwort=a.antwort,
         gefunden=a.gefunden,
-        quellen=[QuelleOut(nr=i, titel=h.titel, seite=h.seite, url=f"{h.url}#page={h.seite}",
-                           score=round(h.score, 3), zitiert=h.chunk_id in zitiert, auszug=h.text)
-                 for i, h in enumerate(a.treffer, start=1)],
-        werkzeuge=[WerkzeugOut(name=w.name, eingabe=w.eingabe, ergebnis=w.ergebnis, fehler=w.fehler)
-                   for w in a.werkzeuge],
+        quellen=[
+            QuelleOut(
+                nr=i,
+                titel=h.titel,
+                seite=h.seite,
+                url=f"{h.url}#page={h.seite}",
+                score=round(h.score, 3),
+                zitiert=h.chunk_id in zitiert,
+                auszug=h.text,
+            )
+            for i, h in enumerate(a.treffer, start=1)
+        ],
+        werkzeuge=[
+            WerkzeugOut(
+                name=w.name, eingabe=w.eingabe, ergebnis=w.ergebnis, fehler=w.fehler
+            )
+            for w in a.werkzeuge
+        ],
         entwurf=a.entwurf,
         ungueltige_zitate=a.ungueltige_zitate,
         personendaten=a.personendaten,
@@ -125,15 +147,20 @@ def pruefe_rate_limit(absender: str) -> None:
     while zeiten and jetzt - zeiten[0] > 60:
         zeiten.popleft()
     if len(zeiten) >= RATE_LIMIT_PRO_MINUTE:
-        raise HTTPException(status_code=429, detail="Zu viele Anfragen. Bitte in einer Minute "
-                            "erneut versuchen.")
+        raise HTTPException(
+            status_code=429,
+            detail="Zu viele Anfragen. Bitte in einer Minute erneut versuchen.",
+        )
     zeiten.append(jetzt)
 
 
 def pruefe_tagesbudget() -> None:
     if protokoll.kosten_heute() >= TAGESBUDGET_USD:
-        raise HTTPException(status_code=503, detail="Das Tagesbudget für Modellaufrufe ist "
-                            "aufgebraucht. Bitte morgen erneut versuchen.")
+        raise HTTPException(
+            status_code=503,
+            detail="Das Tagesbudget für Modellaufrufe ist "
+            "aufgebraucht. Bitte morgen erneut versuchen.",
+        )
 
 
 @app.post("/ask", response_model=AntwortOut)
@@ -151,11 +178,19 @@ def ask(req: FrageIn, request: Request) -> AntwortOut:
     except Exception as exc:
         # Keine internen Details nach aussen geben; vollständig ins Log schreiben
         log.exception("Fehler bei der Beantwortung")
-        protokoll.schreibe(protokoll.eintrag(req.frage, modus, dauer_s=time.perf_counter() - start,
-                                             fehler=exc))
-        raise HTTPException(status_code=502, detail="Die Anfrage konnte nicht beantwortet "
-                            "werden. Bitte später erneut versuchen.") from exc
-    protokoll.schreibe(protokoll.eintrag(req.frage, modus, a, dauer_s=time.perf_counter() - start))
+        protokoll.schreibe(
+            protokoll.eintrag(
+                req.frage, modus, dauer_s=time.perf_counter() - start, fehler=exc
+            )
+        )
+        raise HTTPException(
+            status_code=502,
+            detail="Die Anfrage konnte nicht beantwortet "
+            "werden. Bitte später erneut versuchen.",
+        ) from exc
+    protokoll.schreibe(
+        protokoll.eintrag(req.frage, modus, a, dauer_s=time.perf_counter() - start)
+    )
     return to_out(a)
 
 

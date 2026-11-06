@@ -5,6 +5,7 @@ Monitoring-Protokoll und verfälschen Kosten und Fehlerquote. Die Verbindung des
 Protokolls wird deshalb in jedem Test durch eine ersetzt, die sofort fehlschlägt –
 protokoll.schreibe() fängt das ab, wie im Betrieb bei einem Datenbankausfall.
 """
+
 import pytest
 
 from rag_assistent import api, protokoll

@@ -1,4 +1,5 @@
 """Quellenliste der Dokumente (data/sources.csv)."""
+
 import csv
 from dataclasses import dataclass
 from pathlib import Path

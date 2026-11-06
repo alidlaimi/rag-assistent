@@ -7,6 +7,7 @@ Warum ein Skript statt PDFs im Repository? Die Dokumente gehören den Herausgebe
 Die Quellenliste macht nachvollziehbar, woher jedes Dokument stammt, und jeder kann
 den Bestand mit einem Befehl reproduzieren.
 """
+
 import sys
 import urllib.request
 
@@ -14,7 +15,9 @@ from rag_assistent.pdf_reader import read_pdf
 from rag_assistent.sources import RAW_DIR, load_sources
 
 USER_AGENT = "rag-assistent/0.1 (Portfolio-Projekt; Python urllib)"
-MIN_ZEICHEN_PRO_SEITE = 200  # darunter ist das PDF vermutlich eingescannt (keine Textebene)
+MIN_ZEICHEN_PRO_SEITE = (
+    200  # darunter ist das PDF vermutlich eingescannt (keine Textebene)
+)
 
 
 def download(url: str) -> bytes:
@@ -49,9 +52,13 @@ def main() -> int:
         seiten = read_pdf(src.pfad)
         zeichen = sum(len(text) for _, text in seiten)
         schnitt = zeichen // max(len(seiten), 1)
-        warnung = "  <- WENIG TEXT, evtl. Scan" if schnitt < MIN_ZEICHEN_PRO_SEITE else ""
-        print(f"OK      {src.id:<24} {status:<9} {len(seiten):>3} Seiten, "
-              f"{schnitt:>5} Zeichen/Seite{warnung}")
+        warnung = (
+            "  <- WENIG TEXT, evtl. Scan" if schnitt < MIN_ZEICHEN_PRO_SEITE else ""
+        )
+        print(
+            f"OK      {src.id:<24} {status:<9} {len(seiten):>3} Seiten, "
+            f"{schnitt:>5} Zeichen/Seite{warnung}"
+        )
 
     print(f"\nFertig. Fehler: {fehler}")
     return 1 if fehler else 0

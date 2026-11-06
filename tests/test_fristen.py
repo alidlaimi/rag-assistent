@@ -1,4 +1,5 @@
 """Tests für den Fristenrechner (VRG § 11 Abs. 1, Zürcher Ruhetage)."""
+
 from datetime import date
 
 import pytest
@@ -6,8 +7,10 @@ import pytest
 from rag_assistent.tools.fristen import berechne_frist, ostersonntag, ruhetage_zh
 
 
-@pytest.mark.parametrize("jahr, ostern", [(2025, date(2025, 4, 20)), (2026, date(2026, 4, 5)),
-                                          (2027, date(2027, 3, 28))])
+@pytest.mark.parametrize(
+    "jahr, ostern",
+    [(2025, date(2025, 4, 20)), (2026, date(2026, 4, 5)), (2027, date(2027, 3, 28))],
+)
 def test_ostersonntag(jahr, ostern):
     assert ostersonntag(jahr) == ostern
 
@@ -46,7 +49,9 @@ def test_weihnachten():
 
 
 def test_wochen():
-    assert berechne_frist(date(2026, 3, 3), 2, "wochen").rechnerisches_ende == date(2026, 3, 17)
+    assert berechne_frist(date(2026, 3, 3), 2, "wochen").rechnerisches_ende == date(
+        2026, 3, 17
+    )
 
 
 def test_ungueltige_eingaben():

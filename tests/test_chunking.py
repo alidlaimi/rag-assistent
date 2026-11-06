@@ -1,4 +1,5 @@
 """Tests für die Zerlegung in Chunks (ohne Modell und ohne Datenbank)."""
+
 from rag_assistent.chunking import chunk_document, clean_text, split_text
 
 

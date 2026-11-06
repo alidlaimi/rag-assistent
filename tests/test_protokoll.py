@@ -1,4 +1,5 @@
 """Tests für Protokollierung und Statistik-Endpunkt – ohne Datenbank."""
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -13,9 +14,17 @@ FRAGE = "Ich, Max Muster, wohne an der Bahnhofstrasse 1 – bis wann läuft mein
 
 def antwort() -> Answer:
     h = Hit(1, "zhdk-ro", "RO", "https://x", 15, "Text", 0.91)
-    return Answer(frage=FRAGE, antwort="30 Tage [1].", gefunden=True, treffer=[h], quellen=[h],
-                  modell="claude-sonnet-5-5", input_tokens=10_000, output_tokens=500,
-                  werkzeuge=[Werkzeugaufruf("frist_berechnen", {"datum": "2026-03-04"}, "…")])
+    return Answer(
+        frage=FRAGE,
+        antwort="30 Tage [1].",
+        gefunden=True,
+        treffer=[h],
+        quellen=[h],
+        modell="claude-sonnet-5-5",
+        input_tokens=10_000,
+        output_tokens=500,
+        werkzeuge=[Werkzeugaufruf("frist_berechnen", {"datum": "2026-03-04"}, "…")],
+    )
 
 
 def test_frage_wird_nicht_im_klartext_gespeichert(monkeypatch):
@@ -34,14 +43,14 @@ def test_werkzeuge_nur_mit_namen():
 def test_kosten_und_status():
     e = protokoll.eintrag(FRAGE, "agent", antwort(), dauer_s=1.5)
     assert e["status"] == "beantwortet"
-    assert e["kosten_usd"] == pytest.approx(0.025)   # 10'000 × 2 + 500 × 10 USD pro Mio.
+    assert e["kosten_usd"] == pytest.approx(0.025)  # 10'000 × 2 + 500 × 10 USD pro Mio.
     assert e["quellen"] == [{"dok": "zhdk-ro", "seite": 15}]
     assert e["dauer_ms"] == 1500
 
 
 def test_gleiche_frage_gleicher_hash_anderes_salt_anderer_hash(monkeypatch):
     a = protokoll.frage_hash("Rekursfrist?")
-    assert a == protokoll.frage_hash("  rekursfrist? ")   # normalisiert
+    assert a == protokoll.frage_hash("  rekursfrist? ")  # normalisiert
     monkeypatch.setenv("PROTOKOLL_SALT", "anderes-geheimnis")
     assert protokoll.frage_hash("Rekursfrist?") != a
 
@@ -49,8 +58,11 @@ def test_gleiche_frage_gleicher_hash_anderes_salt_anderer_hash(monkeypatch):
 def test_fehler_beim_schreiben_wird_nicht_weitergereicht(monkeypatch):
     def kaputt():
         raise ConnectionError("DB weg")
+
     monkeypatch.setattr(protokoll, "get_connection", kaputt)
-    protokoll.schreibe(protokoll.eintrag(FRAGE, "agent", antwort()))   # darf nicht werfen
+    protokoll.schreibe(
+        protokoll.eintrag(FRAGE, "agent", antwort())
+    )  # darf nicht werfen
 
 
 def test_api_protokolliert_erfolg_und_fehler(monkeypatch):
@@ -61,6 +73,7 @@ def test_api_protokolliert_erfolg_und_fehler(monkeypatch):
 
     def kaputt(frage):
         raise TimeoutError("intern")
+
     monkeypatch.setattr(api.agent, "run", kaputt)
     assert client.post("/ask", json={"frage": FRAGE}).status_code == 502
     assert [e["status"] for e in geschrieben] == ["beantwortet", "fehler"]
@@ -86,4 +99,4 @@ def test_protokoll_speichert_nur_arten_der_personendaten():
 
 
 def test_kosten_heute_ohne_datenbank_ist_null():
-    assert protokoll.kosten_heute() == 0.0   # conftest sperrt die Datenbank
+    assert protokoll.kosten_heute() == 0.0  # conftest sperrt die Datenbank

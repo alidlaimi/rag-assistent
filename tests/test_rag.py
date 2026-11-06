@@ -1,16 +1,30 @@
 """Tests für Suche-Filter und RAG-Logik – ohne Datenbank, Modell oder API."""
+
 from rag_assistent import rag
 from rag_assistent.llm import LlmResult
 from rag_assistent.retrieval import Hit, diversify
 
 
 def hit(source: str, score: float, seite: int = 1) -> Hit:
-    return Hit(chunk_id=0, source_id=source, titel=f"Dokument {source}", url="https://x",
-               seite=seite, text="Text", score=score)
+    return Hit(
+        chunk_id=0,
+        source_id=source,
+        titel=f"Dokument {source}",
+        url="https://x",
+        seite=seite,
+        text="Text",
+        score=score,
+    )
 
 
 def test_diversify_begrenzt_treffer_pro_dokument():
-    hits = [hit("a", 0.95), hit("a", 0.94), hit("a", 0.93), hit("b", 0.90), hit("c", 0.85)]
+    hits = [
+        hit("a", 0.95),
+        hit("a", 0.94),
+        hit("a", 0.93),
+        hit("b", 0.90),
+        hit("c", 0.85),
+    ]
     result = diversify(hits, k=5, per_doc=2)
     assert [h.source_id for h in result] == ["a", "a", "b", "c"]
 
@@ -43,10 +57,20 @@ def test_ohne_relevante_treffer_wird_modell_nicht_aufgerufen(monkeypatch):
 
 
 def test_antwort_mit_quellen_und_ungueltigem_zitat(monkeypatch):
-    monkeypatch.setattr(rag, "search", lambda frage: [hit("a", 0.95, 3), hit("b", 0.90, 5)])
-    monkeypatch.setattr(rag.llm, "complete", lambda system, user: LlmResult(
-        text="Urlaub ist möglich [1], siehe auch [4].", modell="test",
-        input_tokens=100, output_tokens=20, abgeschnitten=False))
+    monkeypatch.setattr(
+        rag, "search", lambda frage: [hit("a", 0.95, 3), hit("b", 0.90, 5)]
+    )
+    monkeypatch.setattr(
+        rag.llm,
+        "complete",
+        lambda system, user: LlmResult(
+            text="Urlaub ist möglich [1], siehe auch [4].",
+            modell="test",
+            input_tokens=100,
+            output_tokens=20,
+            abgeschnitten=False,
+        ),
+    )
     a = rag.answer("Urlaub?")
     assert a.gefunden is True
     assert [h.source_id for h in a.quellen] == ["a"]
@@ -58,9 +82,20 @@ def test_schwelle_gilt_fuer_besten_treffer(monkeypatch):
     # Ein schwacher Stichwort-Treffer darf mitkommen, wenn der beste Treffer relevant ist
     monkeypatch.setattr(rag, "search", lambda frage: [hit("a", 0.95), hit("b", 0.40)])
     aufgerufen = []
-    monkeypatch.setattr(rag.llm, "complete", lambda system, user: aufgerufen.append(user) or
-                        LlmResult(text="Antwort [1].", modell="t", input_tokens=1,
-                                  output_tokens=1, abgeschnitten=False))
+    monkeypatch.setattr(
+        rag.llm,
+        "complete",
+        lambda system, user: (
+            aufgerufen.append(user)
+            or LlmResult(
+                text="Antwort [1].",
+                modell="t",
+                input_tokens=1,
+                output_tokens=1,
+                abgeschnitten=False,
+            )
+        ),
+    )
     a = rag.answer("Frage?")
     assert aufgerufen and a.gefunden
     assert len(a.treffer) == 2

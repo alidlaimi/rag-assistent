@@ -6,6 +6,7 @@ solche Wörter. Reciprocal Rank Fusion (RRF) kombiniert beide Ranglisten: Ein Ab
 in beiden weit oben steht, gewinnt – ohne dass die unterschiedlichen Punkteskalen
 vergleichbar sein müssen.
 """
+
 from collections import Counter
 from dataclasses import dataclass
 
@@ -24,7 +25,7 @@ class Hit:
     url: str
     seite: int
     text: str
-    score: float      # Kosinus-Ähnlichkeit zur Frage: 1 = gleiche Bedeutung
+    score: float  # Kosinus-Ähnlichkeit zur Frage: 1 = gleiche Bedeutung
     rrf: float = 0.0  # kombinierter Rang aus Vektor- und Volltextsuche
 
 
@@ -69,7 +70,9 @@ ORDER BY f.rrf DESC
 """
 
 
-def diversify(hits: list[Hit], k: int = TOP_K, per_doc: int = MAX_PRO_DOKUMENT) -> list[Hit]:
+def diversify(
+    hits: list[Hit], k: int = TOP_K, per_doc: int = MAX_PRO_DOKUMENT
+) -> list[Hit]:
     """Nimmt die besten Treffer in gegebener Reihenfolge, höchstens `per_doc` pro Dokument."""
     result: list[Hit] = []
     pro_dokument: Counter[str] = Counter()
@@ -82,8 +85,13 @@ def diversify(hits: list[Hit], k: int = TOP_K, per_doc: int = MAX_PRO_DOKUMENT) 
     return result
 
 
-def search(frage: str, k: int = TOP_K, per_doc: int = MAX_PRO_DOKUMENT,
-           candidates: int = KANDIDATEN, quellen: list[str] | None = None) -> list[Hit]:
+def search(
+    frage: str,
+    k: int = TOP_K,
+    per_doc: int = MAX_PRO_DOKUMENT,
+    candidates: int = KANDIDATEN,
+    quellen: list[str] | None = None,
+) -> list[Hit]:
     """Sucht die passendsten Abschnitte zur Frage (hybrid, nach RRF sortiert).
 
     `quellen` beschränkt die Suche auf diese Dokument-IDs (source_id), z.B. ["zh-vrg"].
@@ -93,7 +101,13 @@ def search(frage: str, k: int = TOP_K, per_doc: int = MAX_PRO_DOKUMENT,
     with get_connection() as conn:
         register_vector(conn)
         rows = conn.execute(
-            HYBRID_SQL, {"vec": vec, "frage": frage, "n": candidates, "rrf_k": RRF_K,
-                         "quellen": quellen}
+            HYBRID_SQL,
+            {
+                "vec": vec,
+                "frage": frage,
+                "n": candidates,
+                "rrf_k": RRF_K,
+                "quellen": quellen,
+            },
         ).fetchall()
     return diversify([Hit(*row) for row in rows], k, per_doc)

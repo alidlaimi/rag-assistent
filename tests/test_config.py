@@ -1,4 +1,5 @@
 """Tests für die Konfiguration und die Regel 'API-Schlüssel nie im Code'."""
+
 from pathlib import Path
 
 from rag_assistent.config import get_settings

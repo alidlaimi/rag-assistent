@@ -14,10 +14,19 @@ Lokale Feiertage (z.B. Sechseläuten) werden nicht berücksichtigt.
 Warum ein Werkzeug statt das Sprachmodell rechnen lassen? Datumsrechnung ist für
 Sprachmodelle fehleranfällig. Code rechnet immer gleich, ist getestet und nachvollziehbar.
 """
+
 from dataclasses import dataclass
 from datetime import date, timedelta
 
-WOCHENTAGE = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"]
+WOCHENTAGE = [
+    "Montag",
+    "Dienstag",
+    "Mittwoch",
+    "Donnerstag",
+    "Freitag",
+    "Samstag",
+    "Sonntag",
+]
 
 
 def ostersonntag(jahr: int) -> date:
@@ -78,7 +87,9 @@ class FristErgebnis:
             f"Rechnerisches Ende: {_fmt(self.rechnerisches_ende)}",
         ]
         if self.verschoben_wegen:
-            zeilen.append("Verschoben, weil kein Werktag: " + ", ".join(self.verschoben_wegen))
+            zeilen.append(
+                "Verschoben, weil kein Werktag: " + ", ".join(self.verschoben_wegen)
+            )
         zeilen.append(f"FRISTENDE: {_fmt(self.fristende)}")
         return "\n".join(zeilen)
 
@@ -87,7 +98,9 @@ def _fmt(tag: date) -> str:
     return f"{WOCHENTAGE[tag.weekday()]}, {tag:%d.%m.%Y}"
 
 
-def berechne_frist(mitteilung: date, dauer: int, einheit: str = "tage") -> FristErgebnis:
+def berechne_frist(
+    mitteilung: date, dauer: int, einheit: str = "tage"
+) -> FristErgebnis:
     """Berechnet das Fristende nach VRG § 11 Abs. 1 (Einheiten: 'tage' oder 'wochen')."""
     if dauer <= 0:
         raise ValueError("Die Dauer muss positiv sein.")
@@ -95,7 +108,7 @@ def berechne_frist(mitteilung: date, dauer: int, einheit: str = "tage") -> Frist
         raise ValueError("Unterstützte Einheiten: 'tage', 'wochen'.")
 
     tage = dauer * 7 if einheit == "wochen" else dauer
-    ende = mitteilung + timedelta(days=tage)   # Tag der Mitteilung zählt nicht mit
+    ende = mitteilung + timedelta(days=tage)  # Tag der Mitteilung zählt nicht mit
     rechnerisch = ende
     verschoben: list[str] = []
     while (grund := _kein_werktag(ende)) is not None:

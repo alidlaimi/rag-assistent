@@ -4,6 +4,7 @@ Warum chunken? Ein Embedding-Modell verarbeitet nur begrenzt viel Text, und die 
 soll präzise Stellen finden statt ganzer Dokumente. Jeder Chunk bleibt innerhalb einer
 Seite, damit die Quellenangabe (Dokument + Seite) immer exakt ist.
 """
+
 import re
 from dataclasses import dataclass
 
@@ -20,11 +21,13 @@ class Chunk:
 
 def clean_text(text: str) -> str:
     """Bereinigt typische PDF-Artefakte, Absätze bleiben als Leerzeile erhalten."""
-    text = text.replace("­", "")                        # weiche Trennstriche
-    text = re.sub(r"(\w)-\n(?=[a-zäöü])", r"\1", text)      # "Zür-\ncher" -> "Zürcher"
+    text = text.replace("­", "")  # weiche Trennstriche
+    text = re.sub(r"(\w)-\n(?=[a-zäöü])", r"\1", text)  # "Zür-\ncher" -> "Zürcher"
     text = re.sub(r"[ \t]+", " ", text)
-    text = re.sub(r"\n\s*\n+", "\n\n", text)                 # Absatzgrenzen vereinheitlichen
-    text = re.sub(r"(?<!\n)\n(?!\n)", " ", text)             # einfache Zeilenumbrüche -> Leerzeichen
+    text = re.sub(r"\n\s*\n+", "\n\n", text)  # Absatzgrenzen vereinheitlichen
+    text = re.sub(
+        r"(?<!\n)\n(?!\n)", " ", text
+    )  # einfache Zeilenumbrüche -> Leerzeichen
     return re.sub(r" +", " ", text).strip()
 
 
@@ -50,10 +53,12 @@ def _tail(text: str, overlap: int) -> str:
         return text
     tail = text[-overlap:]
     space = tail.find(" ")
-    return tail[space + 1:] if space >= 0 else tail
+    return tail[space + 1 :] if space >= 0 else tail
 
 
-def split_text(text: str, max_chars: int = MAX_CHARS, overlap: int = OVERLAP) -> list[str]:
+def split_text(
+    text: str, max_chars: int = MAX_CHARS, overlap: int = OVERLAP
+) -> list[str]:
     """Teilt einen Text in überlappende Chunks von höchstens `max_chars` Zeichen."""
     chunks: list[str] = []
     current = ""
@@ -71,8 +76,9 @@ def split_text(text: str, max_chars: int = MAX_CHARS, overlap: int = OVERLAP) ->
     return chunks
 
 
-def chunk_document(pages: list[tuple[int, str]], max_chars: int = MAX_CHARS,
-                   overlap: int = OVERLAP) -> list[Chunk]:
+def chunk_document(
+    pages: list[tuple[int, str]], max_chars: int = MAX_CHARS, overlap: int = OVERLAP
+) -> list[Chunk]:
     """Zerlegt alle Seiten eines Dokuments; der Index läuft über das ganze Dokument."""
     result: list[Chunk] = []
     for seite, text in pages:

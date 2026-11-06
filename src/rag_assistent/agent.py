@@ -9,6 +9,7 @@ Ablauf:
 3. Will Claude ein Werkzeug nutzen, führt der Code es aus und gibt das Ergebnis zurück.
    Das wiederholt sich, bis Claude eine Antwort gibt – höchstens MAX_SCHRITTE Mal.
 """
+
 import json
 import time
 from dataclasses import dataclass
@@ -23,9 +24,13 @@ from rag_assistent.tools.fristen import berechne_frist
 from rag_assistent.tools.gesuch import gesuch_entwerfen
 
 MAX_SCHRITTE = 5
-FRISTREGEL_SUCHE = ("Fristberechnung Tag der Mitteilung nicht mitgezählt letzter Tag Samstag "
-                    "öffentlicher Ruhetag nächster Werktag")
-FRISTREGEL_QUELLEN = ["zh-vrg"]   # die Fristregel steht im VRG – andere Dokumente liefern nur Rauschen
+FRISTREGEL_SUCHE = (
+    "Fristberechnung Tag der Mitteilung nicht mitgezählt letzter Tag Samstag "
+    "öffentlicher Ruhetag nächster Werktag"
+)
+FRISTREGEL_QUELLEN = [
+    "zh-vrg"
+]  # die Fristregel steht im VRG – andere Dokumente liefern nur Rauschen
 
 TOOLS = [
     {
@@ -37,7 +42,9 @@ TOOLS = [
         ),
         "input_schema": {
             "type": "object",
-            "properties": {"suchbegriff": {"type": "string", "description": "Suchbegriffe"}},
+            "properties": {
+                "suchbegriff": {"type": "string", "description": "Suchbegriffe"}
+            },
             "required": ["suchbegriff"],
         },
     },
@@ -51,10 +58,16 @@ TOOLS = [
         "input_schema": {
             "type": "object",
             "properties": {
-                "datum": {"type": "string", "description": "Datum der Mitteilung/des Ereignisses, Format JJJJ-MM-TT"},
+                "datum": {
+                    "type": "string",
+                    "description": "Datum der Mitteilung/des Ereignisses, Format JJJJ-MM-TT",
+                },
                 "dauer": {"type": "integer", "description": "Dauer der Frist, z.B. 30"},
                 "einheit": {"type": "string", "enum": ["tage", "wochen"]},
-                "fristart": {"type": "string", "description": "z.B. 'Rekursfrist' – nur zur Beschriftung"},
+                "fristart": {
+                    "type": "string",
+                    "description": "z.B. 'Rekursfrist' – nur zur Beschriftung",
+                },
             },
             "required": ["datum", "dauer", "einheit"],
         },
@@ -72,16 +85,31 @@ TOOLS = [
         "input_schema": {
             "type": "object",
             "properties": {
-                "empfaenger": {"type": "string", "description": "Zuständige Stelle mit Adresse, soweit bekannt"},
+                "empfaenger": {
+                    "type": "string",
+                    "description": "Zuständige Stelle mit Adresse, soweit bekannt",
+                },
                 "betreff": {"type": "string"},
-                "anliegen": {"type": "string", "description": "Ein bis zwei Sätze: was beantragt wird"},
+                "anliegen": {
+                    "type": "string",
+                    "description": "Ein bis zwei Sätze: was beantragt wird",
+                },
                 "begruendung": {"type": "array", "items": {"type": "string"}},
-                "rechtsgrundlagen": {"type": "array", "items": {"type": "string"},
-                                     "description": "z.B. 'Rahmenordnung ZHdK § 33'"},
+                "rechtsgrundlagen": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "z.B. 'Rahmenordnung ZHdK § 33'",
+                },
                 "beilagen": {"type": "array", "items": {"type": "string"}},
                 "frist_hinweis": {"type": "string"},
             },
-            "required": ["empfaenger", "betreff", "anliegen", "begruendung", "rechtsgrundlagen"],
+            "required": [
+                "empfaenger",
+                "betreff",
+                "anliegen",
+                "begruendung",
+                "rechtsgrundlagen",
+            ],
         },
     },
 ]
@@ -139,7 +167,11 @@ class _Lauf:
         self.entwurf: str | None = None
 
     def suchen(self, suchbegriff: str, quellen: list[str] | None = None) -> str:
-        neu = [h for h in search(suchbegriff, quellen=quellen) if h.chunk_id not in {x.chunk_id for x in self.hits}]
+        neu = [
+            h
+            for h in search(suchbegriff, quellen=quellen)
+            if h.chunk_id not in {x.chunk_id for x in self.hits}
+        ]
         if not neu:
             return "Keine weiteren Auszüge gefunden."
         start = len(self.hits) + 1
@@ -150,42 +182,62 @@ class _Lauf:
         if name == "dokumente_durchsuchen":
             return self.suchen(eingabe["suchbegriff"])
         if name == "frist_berechnen":
-            ergebnis = berechne_frist(date.fromisoformat(eingabe["datum"]),
-                                      int(eingabe["dauer"]), eingabe.get("einheit", "tage"))
+            ergebnis = berechne_frist(
+                date.fromisoformat(eingabe["datum"]),
+                int(eingabe["dauer"]),
+                eingabe.get("einheit", "tage"),
+            )
             titel = eingabe.get("fristart", "Frist")
             # Rechtsgrundlage der Berechnung (VRG § 11) als zitierbaren Auszug mitliefern,
             # damit die Verschiebungsregel belegt ist und nicht nur aus der Werkzeugbeschreibung stammt
             beleg = self.suchen(FRISTREGEL_SUCHE, quellen=FRISTREGEL_QUELLEN)
-            return (f"{titel}:\n{ergebnis.als_text()}\n\n"
-                    f"Rechtsgrundlage der Berechnung (zum Zitieren, falls passend):\n{beleg}")
+            return (
+                f"{titel}:\n{ergebnis.als_text()}\n\n"
+                f"Rechtsgrundlage der Berechnung (zum Zitieren, falls passend):\n{beleg}"
+            )
         if name == "gesuch_entwerfen":
             self.entwurf = gesuch_entwerfen(**eingabe)
             return "Entwurf erstellt:\n" + self.entwurf
         raise ValueError(f"Unbekanntes Werkzeug: {name}")
 
 
-def run(frage: str, heute: date | None = None, max_schritte: int = MAX_SCHRITTE) -> Answer:
+def run(
+    frage: str, heute: date | None = None, max_schritte: int = MAX_SCHRITTE
+) -> Answer:
     start = time.perf_counter()
     heute = heute or date.today()
     original = frage
-    frage, personendaten = maskiere(frage)   # Leitplanke: keine Personendaten an das Modell
+    frage, personendaten = maskiere(
+        frage
+    )  # Leitplanke: keine Personendaten an das Modell
     hits = search(frage)
 
     # Leitplanke wie beim einfachen RAG: fremde Fragen kosten nichts.
     if not hits or max(h.score for h in hits) < MIN_SCORE:
-        return Answer(frage=original, antwort=KEINE_ANTWORT, gefunden=False,
-                      dauer_s=time.perf_counter() - start, personendaten=personendaten)
+        return Answer(
+            frage=original,
+            antwort=KEINE_ANTWORT,
+            gefunden=False,
+            dauer_s=time.perf_counter() - start,
+            personendaten=personendaten,
+        )
 
     lauf = _Lauf(hits)
-    messages: list = [{"role": "user", "content": f"{build_context(hits)}\n\nFrage: {frage}"}]
+    messages: list = [
+        {"role": "user", "content": f"{build_context(hits)}\n\nFrage: {frage}"}
+    ]
     aufrufe: list[Werkzeugaufruf] = []
     tokens_in = tokens_out = 0
     response = None
 
     for schritt in range(max_schritte):
         letzter = schritt == max_schritte - 1
-        response = llm.create(system_prompt(heute), messages, tools=TOOLS,
-                              tool_choice={"type": "none"} if letzter else None)
+        response = llm.create(
+            system_prompt(heute),
+            messages,
+            tools=TOOLS,
+            tool_choice={"type": "none"} if letzter else None,
+        )
         tokens_in += response.usage.input_tokens
         tokens_out += response.usage.output_tokens
         if response.stop_reason != "tool_use":
@@ -198,11 +250,21 @@ def run(frage: str, heute: date | None = None, max_schritte: int = MAX_SCHRITTE)
                 continue
             try:
                 ergebnis, fehler = lauf.ausfuehren(block.name, block.input), False
-            except Exception as exc:  # Fehler zurückmelden, damit Claude korrigieren kann
+            except (
+                Exception
+            ) as exc:  # Fehler zurückmelden, damit Claude korrigieren kann
                 ergebnis, fehler = f"Fehler: {exc}", True
-            aufrufe.append(Werkzeugaufruf(block.name, dict(block.input), ergebnis, fehler))
-            resultate.append({"type": "tool_result", "tool_use_id": block.id,
-                              "content": ergebnis, "is_error": fehler})
+            aufrufe.append(
+                Werkzeugaufruf(block.name, dict(block.input), ergebnis, fehler)
+            )
+            resultate.append(
+                {
+                    "type": "tool_result",
+                    "tool_use_id": block.id,
+                    "content": ergebnis,
+                    "is_error": fehler,
+                }
+            )
         messages.append({"role": "user", "content": resultate})
 
     text = llm.text_of(response)
@@ -226,5 +288,10 @@ def run(frage: str, heute: date | None = None, max_schritte: int = MAX_SCHRITTE)
 
 def werkzeuge_als_json(answer: Answer) -> str:
     """Kompakte Darstellung der Werkzeugaufrufe (für Protokoll und Anzeige)."""
-    return json.dumps([{"name": w.name, "eingabe": w.eingabe, "fehler": w.fehler}
-                       for w in answer.werkzeuge], ensure_ascii=False)
+    return json.dumps(
+        [
+            {"name": w.name, "eingabe": w.eingabe, "fehler": w.fehler}
+            for w in answer.werkzeuge
+        ],
+        ensure_ascii=False,
+    )

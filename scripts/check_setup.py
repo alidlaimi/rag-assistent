@@ -2,6 +2,7 @@
 
 Aufruf:  python scripts/check_setup.py
 """
+
 import sys
 
 from rag_assistent.config import get_settings
@@ -11,7 +12,9 @@ from rag_assistent.db import get_connection, init_schema
 def main() -> int:
     s = get_settings()
     print(f"Konfiguration geladen: {s}")  # Schlüssel und Passwort sind ausgeblendet
-    print(f"API-Schlüssel gesetzt: {'ja' if s.anthropic_api_key else 'NEIN – .env prüfen'}")
+    print(
+        f"API-Schlüssel gesetzt: {'ja' if s.anthropic_api_key else 'NEIN – .env prüfen'}"
+    )
 
     try:
         init_schema()
@@ -20,7 +23,9 @@ def main() -> int:
             row = conn.execute(
                 "SELECT extversion FROM pg_extension WHERE extname = 'vector'"
             ).fetchone()
-    except Exception as exc:  # bewusst breit: hier wollen wir eine verständliche Meldung
+    except (
+        Exception
+    ) as exc:  # bewusst breit: hier wollen wir eine verständliche Meldung
         print(f"Datenbank NICHT erreichbar: {exc}")
         print("Läuft der Container? -> docker compose ps")
         return 1

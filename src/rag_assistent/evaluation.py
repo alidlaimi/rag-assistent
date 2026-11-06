@@ -12,6 +12,7 @@ Gemessen wird:
 Die Prüfung ist bewusst regelbasiert statt "Modell bewertet Modell": nachvollziehbar,
 reproduzierbar und kostenlos.
 """
+
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -27,8 +28,11 @@ TESTSET = ROOT / "eval" / "testset.yaml"
 KATEGORIEN = {"fakt", "frist", "rueckfrage", "nicht_in_dokumenten", "ausserhalb"}
 BEANTWORTBAR = {"fakt", "frist"}
 ABLEHNUNG = re.compile(
-    re.escape(KEINE_ANTWORT) + r"|steht dazu nichts|keine Angaben|nicht in den (gefundenen|vorliegenden)"
-    r"|nicht enthalten|keine Informationen", re.IGNORECASE)
+    re.escape(KEINE_ANTWORT)
+    + r"|steht dazu nichts|keine Angaben|nicht in den (gefundenen|vorliegenden)"
+    r"|nicht enthalten|keine Informationen",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)
@@ -52,7 +56,10 @@ def load_testset(path: Path = TESTSET) -> list[Testfall]:
 
 
 def quelle_passt(hit: Hit, fall: Testfall) -> bool:
-    return any(hit.source_id == q["dok"] and q.get("seite") in (None, hit.seite) for q in fall.quellen)
+    return any(
+        hit.source_id == q["dok"] and q.get("seite") in (None, hit.seite)
+        for q in fall.quellen
+    )
 
 
 def _findet(muster: str, text: str) -> bool:
@@ -63,13 +70,13 @@ def _findet(muster: str, text: str) -> bool:
 class Bewertung:
     id: str
     kategorie: str
-    quelle_gefunden: bool | None = None   # erwartete Fundstelle unter den Auszügen
-    quelle_zitiert: bool | None = None    # erwartete Fundstelle zitiert
-    fakten: float | None = None           # Anteil erfüllter Pflichtbegriffe (0–1)
+    quelle_gefunden: bool | None = None  # erwartete Fundstelle unter den Auszügen
+    quelle_zitiert: bool | None = None  # erwartete Fundstelle zitiert
+    fakten: float | None = None  # Anteil erfüllter Pflichtbegriffe (0–1)
     fehlende: list[str] = field(default_factory=list)
     halluzination: list[str] = field(default_factory=list)  # Gründe; leer = keine
     werkzeug_ok: bool | None = None
-    datenschutz_ok: bool | None = None    # erwartete Personendaten entfernt
+    datenschutz_ok: bool | None = None  # erwartete Personendaten entfernt
     modellaufruf: bool = False
     kosten_usd: float = 0.0
     dauer_s: float = 0.0
@@ -77,17 +84,24 @@ class Bewertung:
 
     @property
     def bestanden(self) -> bool:
-        return (not self.halluzination
-                and self.fakten in (None, 1.0)
-                and self.werkzeug_ok is not False
-                and self.datenschutz_ok is not False
-                and self.quelle_zitiert is not False)
+        return (
+            not self.halluzination
+            and self.fakten in (None, 1.0)
+            and self.werkzeug_ok is not False
+            and self.datenschutz_ok is not False
+            and self.quelle_zitiert is not False
+        )
 
 
 def bewerte(fall: Testfall, a: Answer) -> Bewertung:
-    b = Bewertung(id=fall.id, kategorie=fall.kategorie, modellaufruf=bool(a.modell),
-                  kosten_usd=kosten_usd(a.modell, a.input_tokens, a.output_tokens),
-                  dauer_s=a.dauer_s, antwort=a.antwort)
+    b = Bewertung(
+        id=fall.id,
+        kategorie=fall.kategorie,
+        modellaufruf=bool(a.modell),
+        kosten_usd=kosten_usd(a.modell, a.input_tokens, a.output_tokens),
+        dauer_s=a.dauer_s,
+        antwort=a.antwort,
+    )
     abgelehnt = ABLEHNUNG.search(a.antwort) is not None
 
     if fall.quellen:
@@ -105,7 +119,12 @@ def bewerte(fall: Testfall, a: Answer) -> Bewertung:
         b.halluzination.append(f"Zitat ohne Auszug: {a.ungueltige_zitate}")
     if fall.kategorie in ("nicht_in_dokumenten", "ausserhalb") and not abgelehnt:
         b.halluzination.append("Antwort statt Ablehnung")
-    if fall.kategorie in BEANTWORTBAR and a.gefunden and not abgelehnt and not a.quellen:
+    if (
+        fall.kategorie in BEANTWORTBAR
+        and a.gefunden
+        and not abgelehnt
+        and not a.quellen
+    ):
         b.halluzination.append("Antwort ohne Quelle")
 
     # Werkzeuge
@@ -113,7 +132,9 @@ def bewerte(fall: Testfall, a: Answer) -> Bewertung:
     if fall.werkzeug:
         b.werkzeug_ok = fall.werkzeug in genutzt
     if fall.kein_werkzeug:
-        b.werkzeug_ok = fall.kein_werkzeug not in genutzt and (b.werkzeug_ok is not False)
+        b.werkzeug_ok = fall.kein_werkzeug not in genutzt and (
+            b.werkzeug_ok is not False
+        )
     if fall.personendaten:
         b.datenschutz_ok = set(fall.personendaten) <= set(a.personendaten)
     return b
@@ -128,29 +149,44 @@ def bewerte_suche(fall: Testfall, hits: list[Hit]) -> Bewertung:
 
 
 def _quote(werte: list[bool]) -> str:
-    return f"{sum(werte)}/{len(werte)} ({100 * sum(werte) / len(werte):.0f} %)" if werte else "–"
+    return (
+        f"{sum(werte)}/{len(werte)} ({100 * sum(werte) / len(werte):.0f} %)"
+        if werte
+        else "–"
+    )
 
 
 def zusammenfassung(bewertungen: list[Bewertung]) -> dict[str, str]:
     """Kennzahlen für Bericht und Konsole."""
     beantwortbar = [b for b in bewertungen if b.kategorie in BEANTWORTBAR]
-    ablehnen = [b for b in bewertungen if b.kategorie in ("nicht_in_dokumenten", "ausserhalb")]
+    ablehnen = [
+        b for b in bewertungen if b.kategorie in ("nicht_in_dokumenten", "ausserhalb")
+    ]
     mit_modell = [b for b in bewertungen if b.modellaufruf]
     k = {
-        "Quellen-Trefferquote (Suche)": _quote([b.quelle_gefunden for b in bewertungen
-                                                if b.quelle_gefunden is not None]),
+        "Quellen-Trefferquote (Suche)": _quote(
+            [b.quelle_gefunden for b in bewertungen if b.quelle_gefunden is not None]
+        ),
         "Zitiergenauigkeit": _quote([bool(b.quelle_zitiert) for b in beantwortbar]),
-        "Antwortqualität (alle Pflichtbegriffe)": _quote([b.fakten == 1.0 for b in beantwortbar]),
+        "Antwortqualität (alle Pflichtbegriffe)": _quote(
+            [b.fakten == 1.0 for b in beantwortbar]
+        ),
         "Korrekte Ablehnung": _quote([not b.halluzination for b in ablehnen]),
-        "Werkzeugnutzung korrekt": _quote([b.werkzeug_ok for b in bewertungen
-                                           if b.werkzeug_ok is not None]),
-        "Personendaten entfernt": _quote([b.datenschutz_ok for b in bewertungen
-                                          if b.datenschutz_ok is not None]),
+        "Werkzeugnutzung korrekt": _quote(
+            [b.werkzeug_ok for b in bewertungen if b.werkzeug_ok is not None]
+        ),
+        "Personendaten entfernt": _quote(
+            [b.datenschutz_ok for b in bewertungen if b.datenschutz_ok is not None]
+        ),
         "Halluzinationen": f"{sum(bool(b.halluzination) for b in bewertungen)} von {len(bewertungen)}",
         "Bestanden gesamt": _quote([b.bestanden for b in bewertungen]),
     }
     if mit_modell:
         kosten = sum(b.kosten_usd for b in bewertungen)
-        k["Kosten gesamt / pro Frage"] = f"USD {kosten:.3f} / {kosten / len(mit_modell):.4f}"
-        k["Dauer Median"] = f"{sorted(b.dauer_s for b in mit_modell)[len(mit_modell) // 2]:.1f} s"
+        k["Kosten gesamt / pro Frage"] = (
+            f"USD {kosten:.3f} / {kosten / len(mit_modell):.4f}"
+        )
+        k["Dauer Median"] = (
+            f"{sorted(b.dauer_s for b in mit_modell)[len(mit_modell) // 2]:.1f} s"
+        )
     return k

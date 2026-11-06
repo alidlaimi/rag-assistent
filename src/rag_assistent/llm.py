@@ -1,4 +1,5 @@
 """Zugriff auf das Sprachmodell (Anthropic Claude)."""
+
 from dataclasses import dataclass
 
 import anthropic
@@ -18,17 +19,26 @@ class LlmResult:
 def _client() -> anthropic.Anthropic:
     settings = get_settings()
     if not settings.anthropic_api_key:
-        raise RuntimeError("ANTHROPIC_API_KEY fehlt – bitte in der Datei .env eintragen.")
+        raise RuntimeError(
+            "ANTHROPIC_API_KEY fehlt – bitte in der Datei .env eintragen."
+        )
     return anthropic.Anthropic(api_key=settings.anthropic_api_key)
 
 
 def text_of(response) -> str:
     """Nur Textblöcke übernehmen (Werkzeugaufrufe oder Denkschritte gehören nicht in die Antwort)."""
-    return "".join(block.text for block in response.content if block.type == "text").strip()
+    return "".join(
+        block.text for block in response.content if block.type == "text"
+    ).strip()
 
 
-def create(system: str, messages: list, tools: list | None = None,
-           tool_choice: dict | None = None, max_tokens: int = 2048):
+def create(
+    system: str,
+    messages: list,
+    tools: list | None = None,
+    tool_choice: dict | None = None,
+    max_tokens: int = 2048,
+):
     """Roher Modellaufruf – für die Agent-Schleife, die die Antwortblöcke selbst auswertet."""
     kwargs = {"tools": tools} if tools else {}
     if tool_choice:
@@ -44,7 +54,9 @@ def create(system: str, messages: list, tools: list | None = None,
 
 def complete(system: str, user: str, max_tokens: int = 2048) -> LlmResult:
     """Einfacher Aufruf ohne Werkzeuge: eine Frage, eine Antwort."""
-    response = create(system, [{"role": "user", "content": user}], max_tokens=max_tokens)
+    response = create(
+        system, [{"role": "user", "content": user}], max_tokens=max_tokens
+    )
     return LlmResult(
         text=text_of(response),
         modell=response.model,

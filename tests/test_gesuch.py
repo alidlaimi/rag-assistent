@@ -1,13 +1,18 @@
 """Tests für den Gesuchsentwurf."""
+
 import pytest
 
 from rag_assistent.tools.gesuch import gesuch_entwerfen
 
 
 def entwurf(**kwargs):
-    daten = dict(empfaenger="ZHdK, Kanzlei", betreff="Gesuch um Urlaub",
-                 anliegen="Ich beantrage ein Urlaubssemester.", begruendung=["Militärdienst"],
-                 rechtsgrundlagen=["Rahmenordnung ZHdK § 33"])
+    daten = dict(
+        empfaenger="ZHdK, Kanzlei",
+        betreff="Gesuch um Urlaub",
+        anliegen="Ich beantrage ein Urlaubssemester.",
+        begruendung=["Militärdienst"],
+        rechtsgrundlagen=["Rahmenordnung ZHdK § 33"],
+    )
     daten.update(kwargs)
     return gesuch_entwerfen(**daten)
 
@@ -19,7 +24,7 @@ def test_enthaelt_platzhalter_statt_personendaten():
 
 def test_schweizer_briefformat():
     text = entwurf()
-    assert "Sehr geehrte Damen und Herren\n" in text   # ohne Komma
+    assert "Sehr geehrte Damen und Herren\n" in text  # ohne Komma
     assert "Freundliche Grüsse" in text
     assert "ß" not in text
 

@@ -8,14 +8,22 @@ eingesetzt, sondern als Platzhalter gelassen – sie sollen nicht an das Sprachm
 PLATZHALTER_ABSENDER = "[Vorname Name]\n[Strasse Nr.]\n[PLZ Ort]\n[E-Mail]"
 
 
-def gesuch_entwerfen(empfaenger: str, betreff: str, anliegen: str, begruendung: list[str],
-                     rechtsgrundlagen: list[str], beilagen: list[str] | None = None,
-                     frist_hinweis: str | None = None) -> str:
+def gesuch_entwerfen(
+    empfaenger: str,
+    betreff: str,
+    anliegen: str,
+    begruendung: list[str],
+    rechtsgrundlagen: list[str],
+    beilagen: list[str] | None = None,
+    frist_hinweis: str | None = None,
+) -> str:
     """Erstellt einen Briefentwurf im Schweizer Format (ohne Komma nach der Anrede)."""
     if not begruendung:
         raise ValueError("Mindestens ein Begründungspunkt ist nötig.")
     if not rechtsgrundlagen:
-        raise ValueError("Mindestens eine Rechtsgrundlage aus den Dokumenten ist nötig.")
+        raise ValueError(
+            "Mindestens eine Rechtsgrundlage aus den Dokumenten ist nötig."
+        )
 
     teile = [
         PLATZHALTER_ABSENDER,

@@ -1,5 +1,6 @@
 """Tests der Suchfunktion ohne Datenbank: Die Verbindung wird durch eine Attrappe ersetzt,
 die nur mitschreibt, welche SQL-Parameter übergeben werden."""
+
 from rag_assistent import retrieval
 
 
@@ -41,4 +42,4 @@ def test_filter_wird_als_sql_parameter_uebergeben(monkeypatch):
 def test_ohne_filter_wird_none_uebergeben(monkeypatch):
     conn = _fake_db(monkeypatch)
     retrieval.search("Fristen")
-    assert conn.params["quellen"] is None   # NULL im SQL = alle Dokumente
+    assert conn.params["quellen"] is None  # NULL im SQL = alle Dokumente

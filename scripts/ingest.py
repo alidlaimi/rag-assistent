@@ -5,6 +5,7 @@ Aufruf:  python scripts/ingest.py
 Idempotent: Ein Dokument, das schon in der Datenbank ist, wird ersetzt statt doppelt
 gespeichert. So kann das Skript nach jeder Änderung gefahrlos erneut laufen.
 """
+
 import sys
 import time
 
@@ -52,16 +53,28 @@ def main() -> int:
                 doc_id = conn.execute(
                     """INSERT INTO documents (source_id, titel, herausgeber, stand, url, seiten)
                        VALUES (%s, %s, %s, %s, %s, %s) RETURNING id""",
-                    (src.id, src.titel, src.herausgeber, src.stand, src.url, len(pages)),
+                    (
+                        src.id,
+                        src.titel,
+                        src.herausgeber,
+                        src.stand,
+                        src.url,
+                        len(pages),
+                    ),
                 ).fetchone()[0]
                 with conn.cursor() as cur:
                     cur.executemany(
                         """INSERT INTO chunks (document_id, seite, chunk_index, text, embedding)
                            VALUES (%s, %s, %s, %s, %s)""",
-                        [(doc_id, c.seite, c.index, c.text, v) for c, v in zip(chunks, vectors)],
+                        [
+                            (doc_id, c.seite, c.index, c.text, v)
+                            for c, v in zip(chunks, vectors)
+                        ],
                     )
             total_chunks += len(chunks)
-            print(f"OK      {src.id:<24} {len(pages):>3} Seiten -> {len(chunks):>4} Chunks")
+            print(
+                f"OK      {src.id:<24} {len(pages):>3} Seiten -> {len(chunks):>4} Chunks"
+            )
 
         docs, chunks_db = conn.execute(
             "SELECT (SELECT count(*) FROM documents), (SELECT count(*) FROM chunks)"

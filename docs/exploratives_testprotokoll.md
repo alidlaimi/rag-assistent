@@ -87,7 +87,7 @@ Tagen · widersprüchliche Angaben in einer Frage
 | ID | Befund | Schwere | Reproduktion | Herkunft | Status |
 |---|---|---|---|---|---|
 | F-01 | Zitiert das Modell zwei Abschnitte derselben Seite, zeigt die Quellenliste zweimal denselben Link («Reglement über den Erlass von Studiengebühren, Seite 1»). Inhaltlich korrekt, für Nutzende aber doppelt. | niedrig | TC-01 mit echtem Modell: Frage zum Erlass von Studiengebühren, Quellenliste aufklappen | E2E-Lauf gegen das echte Modell, 11.11.2026 (Trace im Artefakt) | Test angepasst (mehrere gleiche Links zulässig); Darstellung offen: Links pro Seite zusammenfassen? |
-| F-02 | | | | Sitzung | |
+| F-02 | Der Zeitraum «Heute» im Monitoring zählt die letzten 24 Stunden, nicht den Kalendertag (`zeitpunkt >= now() - 1 Tag` in `protokoll.statistik`). Eine Anfrage von gestern Abend erscheint heute Morgen noch unter «Heute». | niedrig | Monitoring öffnen, «Heute» wählen; Anfragen der letzten 24 Stunden vor Mitternacht zählen mit | Manueller Testlauf TC-11 in Qase, 11.11.2026 (Abgleich mit dem Code) | offen: Beschriftung «Letzte 24 Stunden» oder Filter ab Mitternacht |
 | F-03 | | | | Sitzung | |
 
 ## Fragen und Ideen für neue Testfälle

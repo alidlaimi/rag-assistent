@@ -22,3 +22,4 @@ kalibrierung*.txt
 
 # Playwright: Screenshots, Videos, Traces der E2E-Tests
 test-results/
+test-logs/

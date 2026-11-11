@@ -15,6 +15,7 @@ Ausführen (Datenbank muss laufen: docker compose up -d):
 """
 
 import os
+import shutil
 import socket
 import subprocess
 import sys
@@ -27,6 +28,9 @@ from playwright.sync_api import expect
 
 PROJEKT = Path(__file__).resolve().parents[2]
 START_TIMEOUT_S = 120  # die API lädt beim Start das Embedding-Modell
+# Logs von API und Chat: eigener Ordner, weil Playwright test-results/ bei jedem Start leert.
+# Die Pipeline lädt beide Ordner bei Fehlschlägen als Artefakte hoch.
+LOG_ORDNER = PROJEKT / "test-logs"
 E2E_DATENBANK = os.getenv("E2E_DATENBANK", "rag_e2e")
 ECHTES_MODELL = os.getenv("E2E_ECHTES_MODELL") == "1"
 
@@ -133,12 +137,20 @@ def testbestand_einlesen() -> None:
 
 
 @pytest.fixture(scope="session")
-def api_url(tmp_path_factory) -> str:
+def log_ordner() -> Path:
+    """Leerer Ordner für die Server-Logs dieses Laufs."""
+    shutil.rmtree(LOG_ORDNER, ignore_errors=True)
+    LOG_ORDNER.mkdir()
+    return LOG_ORDNER
+
+
+@pytest.fixture(scope="session")
+def api_url(log_ordner) -> str:
     """Startet die API gegen die Testdatenbank und prüft den Modus, bevor Tests fragen."""
     testbestand_einlesen()
     port = freier_port()
     url = f"http://127.0.0.1:{port}"
-    log = tmp_path_factory.mktemp("server") / "api.log"
+    log = log_ordner / "api.log"
     befehl = [
         sys.executable,
         "-m",
@@ -159,22 +171,20 @@ def api_url(tmp_path_factory) -> str:
 
 
 @pytest.fixture(scope="session")
-def base_url(api_url, tmp_path_factory) -> str:
+def base_url(api_url, log_ordner) -> str:
     """Adresse der Chat-Oberfläche. Überschreibt `base_url` von pytest-playwright:
     `page.goto("/")` öffnet damit direkt den Chat."""
-    prozess, url = starte_chat(api_url, tmp_path_factory.mktemp("server") / "chat.log")
+    prozess, url = starte_chat(api_url, log_ordner / "chat.log")
     yield url
     prozess.terminate()
     prozess.wait(timeout=10)
 
 
 @pytest.fixture(scope="session")
-def chat_ohne_backend(tmp_path_factory) -> str:
+def chat_ohne_backend(log_ordner) -> str:
     """Zweite Chat-Instanz, deren API-Adresse ins Leere zeigt (Port ohne Server)."""
     tote_api = f"http://127.0.0.1:{freier_port()}"
-    prozess, url = starte_chat(
-        tote_api, tmp_path_factory.mktemp("server") / "chat_tot.log"
-    )
+    prozess, url = starte_chat(tote_api, log_ordner / "chat_ohne_backend.log")
     yield url
     prozess.terminate()
     prozess.wait(timeout=10)

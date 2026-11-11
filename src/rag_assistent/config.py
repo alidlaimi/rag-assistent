@@ -52,6 +52,15 @@ PREISE_USD = {
 }
 
 
+def testmodus() -> bool:
+    """LLM_MODUS=stub: Ein festes Testmodell (stub_llm.py) antwortet statt Claude.
+
+    Für End-to-End-Tests: immer gleiche Antworten, keine API-Kosten, kein Schlüssel nötig.
+    Wird bei jedem Aufruf gelesen (nicht beim Import), damit Tests es umschalten können.
+    """
+    return os.getenv("LLM_MODUS", "").strip().lower() == "stub"
+
+
 def kosten_usd(modell: str, input_tokens: int, output_tokens: int) -> float:
     """Kosten einer Anfrage in USD; unbekanntes Modell -> 0 (wird im Bericht sichtbar)."""
     preis_in, preis_out = PREISE_USD.get(modell, (0.0, 0.0))

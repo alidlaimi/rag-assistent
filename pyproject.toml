@@ -26,9 +26,15 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "httpx>=0.27"]
+# End-to-End-Tests im Browser; Browser danach einmalig: playwright install chromium
+e2e = ["pytest-playwright>=0.7"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# E2E-Tests brauchen Browser und laufende Server: Ein normales `pytest` lässt sie aus,
+# `pytest -m e2e` führt nur sie aus (das letzte -m auf der Kommandozeile gilt).
+addopts = "-m 'not e2e'"
+markers = ["e2e: End-to-End-Test im Browser (Playwright)"]

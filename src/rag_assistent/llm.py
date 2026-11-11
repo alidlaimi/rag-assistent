@@ -4,7 +4,8 @@ from dataclasses import dataclass
 
 import anthropic
 
-from rag_assistent.config import get_settings
+from rag_assistent import stub_llm
+from rag_assistent.config import get_settings, testmodus
 
 
 @dataclass(frozen=True)
@@ -40,6 +41,10 @@ def create(
     max_tokens: int = 2048,
 ):
     """Roher Modellaufruf – für die Agent-Schleife, die die Antwortblöcke selbst auswertet."""
+    if testmodus():
+        # Einzige Stelle, an der der Testmodus eingreift: Alles davor (Personendaten-Filter,
+        # Suche) und danach (Werkzeuge, Zitatprüfung, Protokoll) läuft unverändert.
+        return stub_llm.create(system, messages, tools, tool_choice, max_tokens)
     kwargs = {"tools": tools} if tools else {}
     if tool_choice:
         kwargs["tool_choice"] = tool_choice

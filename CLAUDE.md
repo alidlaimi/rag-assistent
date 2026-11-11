@@ -36,6 +36,8 @@ FastAPI, Streamlit, pytest, Docker / docker-compose, GitHub Actions.
 - API: `uvicorn rag_assistent.api:app --reload`; Chat: `streamlit run ui/Chat.py`.
 - Testset: `python scripts/evaluate.py --nur-suche` (gratis) bzw. ohne Flag (kostet ca. USD 0.60).
 - Tests: `pytest` – müssen vor jedem Commit grün sein.
+- E2E-Tests (Browser, Testmodus ohne Kosten, Datenbank muss laufen): `pytest -m e2e`;
+  gegen das echte Modell: `$env:E2E_ECHTES_MODELL=1; pytest -m e2e` (kostet wenige Rappen).
 
 ## Projektstruktur
 - `src/rag_assistent/` – Anwendungscode (Konfiguration nur über `config.py`)

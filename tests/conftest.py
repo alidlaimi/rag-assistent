@@ -21,6 +21,12 @@ def keine_echte_datenbank(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def kein_testmodus(monkeypatch):
+    """Unit-Tests laufen ohne Testmodus, auch wenn LLM_MODUS in der Umgebung gesetzt ist."""
+    monkeypatch.delenv("LLM_MODUS", raising=False)
+
+
+@pytest.fixture(autouse=True)
 def frisches_rate_limit():
     """Jeder Test startet ohne frühere Anfragen im Rate-Limit."""
     api._anfragen_pro_absender.clear()

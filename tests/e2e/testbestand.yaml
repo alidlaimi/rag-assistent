@@ -1,0 +1,83 @@
+# Fester Testbestand für die E2E-Tests (eingelesen mit scripts/ingest_testbestand.py).
+#
+# Warum nicht die echten PDFs? Die Pipeline soll bei jedem Push gleich ausgehen und nicht
+# davon abhängen, ob die Webseiten der ZHdK oder des Kantons erreichbar sind oder sich ändern.
+# Die Auszüge stammen wörtlich aus den Originaldokumenten (Seitenzahlen und Links wie in
+# data/sources.csv). Es sind amtliche Erlasse – nach Art. 5 URG nicht urheberrechtlich geschützt.
+#
+# Enthalten ist, was die Testfälle brauchen, plus ein Auszug als "Rauschen" (VRG § 10 a/b):
+# - Rekursfrist (RO § 47, VRG § 22)           -> Fristenrechner, Prompt-Injection
+# - Fristberechnung (VRG § 11)                -> Rechtsgrundlage des Fristenrechners
+# - Erlass von Studiengebühren (Reglement)    -> Antwort mit Quelle, Personendaten
+
+dokumente:
+  - source_id: zh-vrg
+    titel: Verwaltungsrechtspflegegesetz (VRG) LS 175.2
+    herausgeber: Kanton Zürich
+    stand: "2026-07-01"
+    url: https://www.notes.zh.ch/appl/zhlex_r.nsf/WebView/34678345513989FAC1258E210026B3D8/$File/175.2_24.5.59_133.pdf
+    seiten:
+      - seite: 4
+        text: >-
+          b. Anordnungen ohne Begründung § 10 a. Auf die Begründung einer Anordnung kann
+          verzichtet werden, wenn a. den Begehren der Verfahrensbeteiligten vollständig
+          entsprochen wird, b. den Verfahrensbeteiligten angezeigt wird, dass sie innert zehn
+          Tagen seit der Mitteilung schriftlich eine Begründung verlangen können; die
+          Rechtsmittelfrist beginnt mit der Zustellung des begründeten Entscheides zu laufen,
+          c. den Verfahrensbeteiligten angezeigt wird, dass sie innert 30 Tagen seit der
+          Mitteilung bei der anordnenden Behörde Einsprache erheben können.
+          Einspracheverfahren § 10 b. 1 Die Einsprache ist schriftlich zu erheben. Sie muss
+          einen Antrag enthalten.
+      - seite: 5
+        text: >-
+          Fristen § 11. 1 Der Tag der Eröffnung einer Frist oder der Tag der Mitteilung eines
+          Entscheides wird bei der Fristberechnung nicht mitgezählt. Ist der letzte Tag einer
+          Frist ein Samstag oder ein öffentlicher Ruhetag, so endigt sie am nächsten Werktag.
+          Samstage und öffentliche Ruhetage im Laufe der Frist werden mitgezählt.
+      - seite: 10
+        text: >-
+          Rekurserhebung § 22. 1 Der Rekurs ist innert 30 Tagen bei der Rekursinstanz
+          schriftlich einzureichen. In Stimmrechtssachen beträgt die Frist fünf Tage. 2 Der
+          Fristenlauf beginnt am Tag nach der Mitteilung des angefochtenen Aktes, ohne solche
+          am Tag nach seiner amtlichen Veröffentlichung und ohne solche am Tag nach seiner
+          Kenntnisnahme. 3 Bei besonderer Dringlichkeit kann die anordnende Behörde die
+          Rekursfrist bis auf fünf Tage abkürzen.
+
+  - source_id: zhdk-ro
+    titel: Rahmenordnung für Bachelor- und Masterstudiengänge der ZHdK (RO)
+    herausgeber: ZHdK
+    stand: "2021-11-02"
+    url: https://www.zhdk.ch/file/live/b6/b6dc8d0a96dded295b92af5c2eb12a699b00e518/ro_de_414.262.1_2.11.21_124.pdf
+    seiten:
+      - seite: 15
+        text: >-
+          B. Rechtsschutz. Grundlage § 46. Das Rechtsmittelverfahren richtet sich nach dem
+          FaHG und dem Verwaltungsrechtspflegegesetz vom 24. Mai 1959. Rechtsmittel § 47. 1
+          Anordnungen der ZHdK können mit Rekurs angefochten werden. Die Rekursfrist beträgt
+          30 Tage. 2 Anordnungen im Zusammenhang mit der Zulassung an die ZHdK unterliegen
+          zunächst der internen Einsprache an die zuständige Departementsleitung. Die
+          Einsprachefrist beträgt 30 Tage. Der Einspracheentscheid kann mit Rekurs angefochten
+          werden. 3 Über den Rekurs befindet die Rekurskommission der Zürcher Hochschulen.
+
+  - source_id: zhdk-gebuehrenerlass
+    titel: Reglement über den Erlass von Studiengebühren
+    herausgeber: ZHdK
+    stand: "2012-11-21"
+    url: https://intern.zhdk.ch/fileadmin/data_zhdk/studium/Studium/Studiengebuehren/Reglement_Studiengebuehrerlass_21.11.2012.pdf
+    seiten:
+      - seite: 1
+        text: >-
+          § 1. Zweck / Gegenstand 1 Das Reglement regelt die Voraussetzungen und das Vorgehen
+          für den gänzlichen oder teilweisen Erlass der Studiengebühren gemäss § 4 und § 6 der
+          Verordnung über die Studiengebühren an der Zürcher Fachhochschule. Als Ermässigung
+          gilt der teilweise Erlass der Studiengebühren; der gänzliche Erlass bedeutet eine
+          Befreiung der Bezahlung von Studiengebühren. § 3. Besondere Fälle 1 Als besondere
+          Fälle gelten namentlich Härtefälle. Um einen Härtefall handelt es sich, wenn eine
+          finanzielle Bedürftigkeit nachgewiesen werden kann. Eine finanzielle Bedürftigkeit
+          liegt insbesondere dann vor, wenn die eigenen Mittel zum Studium und zum
+          Lebensunterhalt nicht ausreichen und keine andere finanzielle Unterstützung vorliegt
+          oder diese nicht genügt. 2 Als weiteres Kriterium für besonders begründete Fälle
+          kann eine ausserordentliche künstlerische Begabung anerkannt werden; diese ist durch
+          die Departementsleitung festzustellen. § 6. Zeitpunkt und Verfahren 1
+          Studiengebühren können frühestens ab dem zweiten Semester eines Studiums erlassen
+          werden.

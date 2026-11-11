@@ -69,7 +69,11 @@ def test_interner_fehler_gibt_keine_details_preis(monkeypatch):
 
 def test_health(monkeypatch):
     monkeypatch.setattr(api, "db_ok", lambda: True)
-    assert client.get("/health").json() == {"status": "ok", "datenbank": True}
+    assert client.get("/health").json() == {
+        "status": "ok",
+        "datenbank": True,
+        "testmodus": False,
+    }
 
 
 def test_rate_limit(monkeypatch):

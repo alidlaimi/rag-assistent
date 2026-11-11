@@ -12,8 +12,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
-from rag_assistent import agent, protokoll, rag
-from rag_assistent.config import RATE_LIMIT_PRO_MINUTE, TAGESBUDGET_USD
+from rag_assistent import agent, protokoll, rag, stub_llm
+from rag_assistent.config import RATE_LIMIT_PRO_MINUTE, TAGESBUDGET_USD, testmodus
 from rag_assistent.db import get_connection
 from rag_assistent.rag import Answer
 
@@ -133,7 +133,11 @@ def db_ok() -> bool:
 def health() -> dict:
     """Prüft, ob API und Datenbank erreichbar sind (für Docker und Monitoring)."""
     datenbank = db_ok()
-    return {"status": "ok" if datenbank else "eingeschraenkt", "datenbank": datenbank}
+    return {
+        "status": "ok" if datenbank else "eingeschraenkt",
+        "datenbank": datenbank,
+        "testmodus": testmodus(),  # E2E-Tests prüfen das, bevor sie Fragen stellen
+    }
 
 
 # Einfaches Rate-Limit im Speicher: Zeitpunkte der letzten Anfragen pro Absender.
@@ -192,6 +196,18 @@ def ask(req: FrageIn, request: Request) -> AntwortOut:
         protokoll.eintrag(req.frage, modus, a, dauer_s=time.perf_counter() - start)
     )
     return to_out(a)
+
+
+@app.get("/testmodus/letzte-modellanfrage", include_in_schema=False)
+def letzte_modellanfrage() -> dict:
+    """Nur im Testmodus: Was hat das (Test-)Modell zuletzt erhalten?
+
+    Damit belegen E2E-Tests, dass z.B. eine E-Mail-Adresse nie beim Modell ankommt.
+    Im Betrieb gibt es den Endpunkt nicht (404) – er würde sonst Anfragen offenlegen.
+    """
+    if not testmodus():
+        raise HTTPException(status_code=404, detail="Not Found")
+    return stub_llm.letzte_anfrage()
 
 
 @app.get("/statistik")

@@ -19,3 +19,6 @@ Thumbs.db
 
 # Lokale Testprotokolle
 kalibrierung*.txt
+
+# Playwright: Screenshots, Videos, Traces der E2E-Tests
+test-results/

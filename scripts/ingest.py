@@ -11,9 +11,8 @@ import time
 
 from pgvector.psycopg import register_vector
 
-from rag_assistent.chunking import chunk_document
 from rag_assistent.db import get_connection, init_schema
-from rag_assistent.embeddings import embed_passages
+from rag_assistent.einlesen import speichere_dokument
 from rag_assistent.pdf_reader import read_pdf
 from rag_assistent.sources import load_sources
 
@@ -41,40 +40,20 @@ def main() -> int:
                 continue
 
             pages = read_pdf(src.pfad)
-            chunks = chunk_document(pages)
-            if not chunks:
+            anzahl = speichere_dokument(
+                conn,
+                source_id=src.id,
+                titel=src.titel,
+                herausgeber=src.herausgeber,
+                stand=src.stand,
+                url=src.url,
+                pages=pages,
+            )
+            if not anzahl:
                 print(f"LEER    {src.id}: kein Text gefunden")
                 continue
-            vectors = embed_passages([c.text for c in chunks])
-
-            # Eine Transaktion pro Dokument: entweder alles gespeichert oder nichts
-            with conn.transaction():
-                conn.execute("DELETE FROM documents WHERE source_id = %s", (src.id,))
-                doc_id = conn.execute(
-                    """INSERT INTO documents (source_id, titel, herausgeber, stand, url, seiten)
-                       VALUES (%s, %s, %s, %s, %s, %s) RETURNING id""",
-                    (
-                        src.id,
-                        src.titel,
-                        src.herausgeber,
-                        src.stand,
-                        src.url,
-                        len(pages),
-                    ),
-                ).fetchone()[0]
-                with conn.cursor() as cur:
-                    cur.executemany(
-                        """INSERT INTO chunks (document_id, seite, chunk_index, text, embedding)
-                           VALUES (%s, %s, %s, %s, %s)""",
-                        [
-                            (doc_id, c.seite, c.index, c.text, v)
-                            for c, v in zip(chunks, vectors)
-                        ],
-                    )
-            total_chunks += len(chunks)
-            print(
-                f"OK      {src.id:<24} {len(pages):>3} Seiten -> {len(chunks):>4} Chunks"
-            )
+            total_chunks += anzahl
+            print(f"OK      {src.id:<24} {len(pages):>3} Seiten -> {anzahl:>4} Chunks")
 
         docs, chunks_db = conn.execute(
             "SELECT (SELECT count(*) FROM documents), (SELECT count(*) FROM chunks)"

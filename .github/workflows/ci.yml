@@ -42,9 +42,73 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  e2e:
+    name: E2E-Tests (Testmodus)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Datenbank als Service-Container: dasselbe Image wie lokal in docker-compose.yml
+    services:
+      db:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: rag
+          POSTGRES_PASSWORD: ci-nur-fuer-tests   # Wegwerf-Datenbank, existiert nur in diesem Lauf
+          POSTGRES_DB: rag
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U rag"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: rag
+      POSTGRES_PASSWORD: ci-nur-fuer-tests
+      POSTGRES_DB: rag
+      # Kein ANTHROPIC_API_KEY: Der Testmodus (LLM_MODUS=stub, gesetzt von tests/e2e/conftest.py)
+      # braucht keinen – ein versehentlicher Modellaufruf würde fehlschlagen, nicht kosten.
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: PyTorch (CPU-Variante, klein)
+        run: pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - name: Projekt mit E2E-Werkzeugen installieren
+        run: pip install -e ".[dev,e2e]"
+      # Embedding-Modell (rund 470 MB) nur beim ersten Lauf von Hugging Face laden
+      - name: Embedding-Modell aus dem Cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-multilingual-e5-small-v1
+      - name: Browser für Playwright
+        run: python -m playwright install --with-deps chromium
+      - name: E2E-Tests
+        run: >-
+          pytest -m e2e -v
+          --output test-results
+          --screenshot only-on-failure
+          --video retain-on-failure
+          --tracing retain-on-failure
+      # Nur bei Fehlschlägen: Screenshot, Video, Trace pro Test und die Logs von API und Chat.
+      # Trace ansehen: Datei trace.zip auf https://trace.playwright.dev ziehen.
+      - name: Artefakte bei Fehlschlag hochladen
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-fehlschlag-${{ github.run_number }}
+          path: |
+            test-results/
+            test-logs/
+          retention-days: 14
+
   images:
     name: Docker-Images
-    needs: [tests, geheimnisse]
+    needs: [tests, geheimnisse, e2e]   # Images nur, wenn alle Tests grün sind
     runs-on: ubuntu-latest
     permissions:
       contents: read

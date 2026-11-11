@@ -44,8 +44,11 @@ def test_tc01_antwort_mit_quellenangabe(page: Page):
     link = quellen.get_by_role(
         "link", name="Reglement über den Erlass von Studiengebühren, Seite 1"
     )
-    expect(link).to_be_visible()
-    expect(link).to_have_attribute("href", re.compile(r"\.pdf#page=1$"))
+    # Mindestens ein Link: Zitiert das Modell zwei Abschnitte derselben Seite, erscheint er
+    # zweimal (gefunden im Lauf gegen das echte Modell – das Testmodell zitiert nur [1])
+    expect(link).not_to_have_count(0)
+    expect(link.first).to_be_visible()
+    expect(link.first).to_have_attribute("href", re.compile(r"\.pdf#page=1$"))
 
 
 def test_tc02_frage_ausserhalb_der_dokumente(page: Page):

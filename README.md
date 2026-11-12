@@ -10,9 +10,10 @@ entwirft kurze Gesuche. Steht etwas nicht in den Dokumenten, sagt der Assistent 
 | | |
 |---|---|
 | **Testset** | 30/30 bestanden, 0 Halluzinationen ([Bericht](eval/bericht.md)) |
+| **Tests** | 105 Unit- und Integrationstests, 8 E2E-Tests mit Playwright gegen die Chat-Oberfläche – bei jedem Push, ohne API-Kosten ([Teststrategie](#teststrategie)) |
 | **Kosten** | ≈ 2.3 US-Cent pro Antwort; Fragen ausserhalb der Dokumente kosten nichts |
 | **Datenschutz** | Personendaten werden vor dem Modellaufruf entfernt; Fragen nie im Klartext protokolliert |
-| **Betrieb** | Container (API, Chat, PostgreSQL/pgvector), CI/CD mit Tests, Geheimnis-Prüfung und Images auf ghcr.io |
+| **Betrieb** | Container (API, Chat, PostgreSQL/pgvector), CI/CD mit Unit-, Integrations- und E2E-Tests, Geheimnis-Prüfung und Images auf ghcr.io |
 
 ![Antwort mit Fristberechnung](docs/screenshots/01_antwort_frist.png)
 
@@ -20,7 +21,7 @@ entwirft kurze Gesuche. Steht etwas nicht in den Dokumenten, sagt der Assistent 
 
 [Demo in 5 Minuten](#demo-in-5-minuten) · [Architektur](#architektur) ·
 [Komponenten](#komponenten) · [Leitplanken](#leitplanken) · [Monitoring](#monitoring) ·
-[Testergebnisse](#testergebnisse) · [Betrieb und CI/CD](#betrieb-und-cicd) ·
+[Teststrategie](#teststrategie) · [Testergebnisse](#testergebnisse) · [Betrieb und CI/CD](#betrieb-und-cicd) ·
 [Installation](#installation) · [Datenquellen](#datenquellen) ·
 [Grenzen und nächste Schritte](#grenzen-und-nächste-schritte)
 
@@ -147,6 +148,100 @@ Bewusster Zielkonflikt: Damit lässt sich nicht auswerten, *welche Themen* gefra
 eine Verwaltung wiegt Datensparsamkeit schwerer. Ein Fehler beim Protokollieren verhindert nie
 die Antwort; Tests haben keinen Zugriff auf die Protokolltabelle.
 
+## Teststrategie
+
+Vier Stufen, nach dem Prinzip der Testpyramide: unten viele schnelle, günstige Tests, oben wenige
+langsame, die das ganze System prüfen. Jede Stufe beantwortet eine eigene Frage.
+
+```
+                      ┌───────────────┐
+                      │ manuell       │  4 Testfälle + exploratives Testen
+                    ┌─┴───────────────┴─┐
+                    │ E2E (Playwright)  │  8 Tests im Browser – bei jedem Push
+                  ┌─┴───────────────────┴─┐
+                  │ LLM-Testset           │  30 Fragen gegen das echte Modell
+                ┌─┴───────────────────────┴─┐
+                │ Unit + Integration        │  105 Tests in wenigen Sekunden
+                └───────────────────────────┘
+```
+
+| Stufe | Frage | Wie | Wann | Kosten |
+|---|---|---|---|---|
+| Unit und Integration | Rechnet und entscheidet der Code richtig? | pytest; Fristenrechner, Chunking, Personendaten-Filter, Protokoll; API über TestClient, Agent-Schleife mit nachgebautem Modell | jeder Push | keine |
+| LLM-Testset | Antwortet das echte Modell richtig und mit der richtigen Quelle? | 30 Fragen mit Erwartung und Fundstelle, regelbasiert bewertet ([Testergebnisse](#testergebnisse)) | bei Änderungen an Suche, Prompt oder Modell | ≈ USD 0.70 |
+| E2E | Funktioniert das Zusammenspiel aus Sicht der Nutzenden? | Playwright bedient die Chat-Oberfläche: Streamlit → API → Personendaten-Filter → Suche in pgvector → Agent → Protokoll → Monitoring | jeder Push (Testmodus); von Hand gegen das echte Modell | keine bzw. wenige Rappen |
+| Manuell | Was hat niemand vorhergesehen? | Testfälle in Qase und explorative Sitzungen ([Protokoll](docs/exploratives_testprotokoll.md)) | vor einem Release | Zeit |
+
+### E2E-Tests: warum ein Testmodus?
+
+Ein Sprachmodell antwortet nicht jedes Mal gleich, kostet pro Aufruf und braucht einen
+API-Schlüssel. Ein Test in der Pipeline muss aber bei jedem Push gleich ausgehen – sonst wird er
+ignoriert. Deshalb ersetzt der **Testmodus** (`LLM_MODUS=stub`) an genau einer Stelle
+(`llm.create`) das Modell durch ein festes Testmodell ([`stub_llm.py`](src/rag_assistent/stub_llm.py));
+alles andere läuft echt, auch Embeddings, Datenbank und Fristenrechner. Die Datenbank enthält einen
+festen [Testbestand](tests/e2e/testbestand.yaml) (wörtliche Auszüge aus VRG, ZHdK-Rahmenordnung
+und Gebührenreglement), damit die Tests nicht von fremden Webseiten abhängen.
+
+Was der Testmodus **nicht** prüfen kann: ob ein echtes Modell den Fristenrechner selbst aufruft,
+korrekt zitiert und einer Prompt-Injection widersteht. Das prüft der Lauf **gegen das echte
+Modell** mit denselben Tests. Er hat bereits einen Fall gefunden, den der Testmodus nicht zeigen
+konnte: Das echte Modell zitierte zwei Abschnitte derselben Seite, der Test erwartete einen Link.
+
+| Testfall | Prüft | Zusätzlich im Testmodus |
+|---|---|---|
+| TC-00 Smoke | Chat lädt, Bedienelemente da, kein Fehler | |
+| TC-01 Quellenangabe | Antwort mit Link auf Dokument und Seite (`#page=1`) | |
+| TC-02 Ausserhalb | Ablehnung ohne Modellaufruf | |
+| TC-03 Fristenrechner | Fristende 7.4.2026 über Ostern, Quelle VRG § 11 | |
+| TC-04 Personendaten | Hinweis in der Oberfläche | beim Modell kamen nur Platzhalter an (Kontroll-Endpunkt) |
+| TC-05 Prompt-Injection | belegte Frist 30 Tage, Quellen trotz „ohne Quellen“ | Schutzregel im Systemprompt, Frage nur als Daten |
+| TC-06 Monitoring | neue Anfrage erscheint im Dashboard | |
+| TC-07 Backend aus | verständliche Fehlermeldung statt Absturz | |
+
+Der Kontroll-Endpunkt `/testmodus/letzte-modellanfrage` existiert nur im Testmodus (sonst 404).
+Die E2E-Tests schreiben in eine eigene Datenbank `rag_e2e`; das Einlese-Skript verweigert jeden
+Datenbanknamen ohne „e2e“, damit die Arbeitsdatenbank nie überschrieben wird. Jeder Test wurde
+mit einem absichtlich eingebauten Fehler gegengeprüft: Er schlägt genau dann fehl, wenn er soll.
+
+**Ausführen:**
+
+```powershell
+docker compose up -d                          # Datenbank
+pytest -m e2e                                 # Testmodus, ohne Kosten (Server startet der Test selbst)
+pytest -m e2e --headed --slowmo 300           # mit sichtbarem Browser
+pytest -m e2e --tracing on                    # Trace pro Test in test-results/
+python -m playwright show-trace test-results\<Test>\trace.zip
+$env:E2E_ECHTES_MODELL=1; pytest -m e2e       # gegen das echte Modell (Schlüssel aus .env)
+```
+
+In der Pipeline laufen die E2E-Tests bei jedem Push (Job „E2E-Tests (Testmodus)“, rund 3 Minuten).
+Schlägt einer fehl, liegen Screenshot, Video, Playwright-Trace und die Logs von API und Chat als
+Artefakt beim Lauf; ein Trace lässt sich auf [trace.playwright.dev](https://trace.playwright.dev)
+Schritt für Schritt ansehen. Der Lauf gegen das echte Modell wird unter *Actions → E2E gegen das
+echte Modell → Run workflow* gestartet.
+
+### Testmanagement
+
+Die 12 Testfälle (8 automatisiert, 4 manuell) liegen versioniert in
+[`docs/testfaelle/testfaelle.yaml`](docs/testfaelle/testfaelle.yaml) und werden als CSV in
+[Qase](https://qase.io) importiert; dort laufen Testläufe, Resultate und Befunde zusammen.
+[`tests/test_testfaelle.py`](tests/test_testfaelle.py) prüft bei jedem Push die
+Rückverfolgbarkeit: Jeder automatisierte Testfall hat einen echten Test, jeder E2E-Test einen
+Testfall, und die Importdatei ist aktuell. Anleitung: [`docs/testmanagement.md`](docs/testmanagement.md).
+
+Erster vollständiger Testlauf (11.11.2026): **12/12 bestanden** – 8 automatisiert mit Verweis auf
+den CI-Lauf, 4 manuell ausgeführt. Befunde aus Tests und explorativem Testen stehen im
+[Testprotokoll](docs/exploratives_testprotokoll.md), z.B. F-02: Der Zeitraum „Heute“ im
+Monitoring zählt die letzten 24 Stunden statt des Kalendertags.
+
+### Testautomation in 3 Minuten
+
+| Zeit | Schritt | Was es zeigt |
+|---|---|---|
+| 0:00 | `pytest -m e2e --headed --slowmo 300` | Der ganze Stack startet; der Browser stellt Fragen, prüft Quellen, Fristberechnung und Fehlermeldung |
+| 1:00 | GitHub → Actions: Job „E2E-Tests (Testmodus)“; Trace von TC-03 auf trace.playwright.dev | E2E in der Pipeline; jeder Schritt mit Bild der Seite, Prüfungen und Konsole |
+| 2:00 | Qase: Repository und abgeschlossener Testlauf | Testfälle mit Schritten, automatisiert und manuell, Resultate mit Verweis auf den CI-Lauf |
+
 ## Testergebnisse
 
 Testset: [`eval/testset.yaml`](eval/testset.yaml) – 30 Fragen, jede Erwartung mit Dokument und
@@ -215,9 +310,14 @@ vom Image ausgeschlossen.
 
 | Job | Was er tut |
 |---|---|
-| Tests | installiert das Projekt und führt alle Tests aus – ohne Datenbank, Modell oder API-Schlüssel |
+| Tests | installiert das Projekt und führt die Unit- und Integrationstests aus – ohne Datenbank, Modell oder API-Schlüssel |
+| E2E-Tests (Testmodus) | PostgreSQL/pgvector als Service-Container, Testbestand einlesen, API und Chat starten, 8 Playwright-Tests im Browser; bei Fehlschlag Screenshot, Video, Trace und Server-Logs als Artefakt |
 | Geheimnis-Prüfung | Gitleaks durchsucht die ganze Git-Historie nach Schlüsseln und Passwörtern |
-| Docker-Images | baut API- und UI-Image nur, wenn beide Prüfungen grün sind; auf `main` Veröffentlichung in der GitHub Container Registry, versioniert mit dem Commit-Hash |
+| Docker-Images | baut API- und UI-Image nur, wenn alle drei Prüfungen grün sind; auf `main` Veröffentlichung in der GitHub Container Registry, versioniert mit dem Commit-Hash |
+
+Zusätzlich, nur von Hand gestartet: [`e2e-echtes-modell.yml`](.github/workflows/e2e-echtes-modell.yml)
+führt dieselben E2E-Tests gegen das echte Modell aus (API-Schlüssel als Repository-Secret,
+wenige Rappen pro Lauf) und speichert Trace und Video für jeden Test.
 
 Das automatisierte Deployment endet bewusst bei veröffentlichten Images, die jeder Server mit
 Docker starten kann; eine Ziel-Infrastruktur ist nicht Teil dieses Portfolio-Projekts.
@@ -231,11 +331,13 @@ copy .env.example .env          # API-Schlüssel, DB-Passwort und PROTOKOLL_SALT
 docker compose up -d            # PostgreSQL mit pgvector
 py -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -e ".[dev]"
+pip install -e ".[dev,e2e]"      # e2e: Playwright; ohne E2E-Tests reicht ".[dev]"
+python -m playwright install chromium
 python scripts/check_setup.py   # Konfiguration und Datenbank prüfen
 python scripts/download_docs.py # PDFs gemäss data/sources.csv laden (mit Textebenen-Prüfung)
 python scripts/ingest.py        # chunken, Embeddings berechnen, speichern
-pytest                          # 94 Tests
+pytest                          # 105 Unit- und Integrationstests
+pytest -m e2e                   # 8 E2E-Tests im Browser (Testmodus, braucht die Datenbank)
 
 # Web: zwei Terminals
 uvicorn rag_assistent.api:app --reload
@@ -263,15 +365,21 @@ src/rag_assistent/
   tools/fristen.py     Fristenrechner (VRG § 11, Zürcher Feiertage)
   tools/gesuch.py      Gesuchsentwurf
   datenschutz.py       Personendaten-Filter
-  llm.py               Claude API
+  llm.py               Claude API (im Testmodus: stub_llm.py)
+  stub_llm.py          festes Testmodell für E2E-Tests (LLM_MODUS=stub)
+  einlesen.py          Dokument chunken, Embeddings, speichern (Betrieb und Testbestand)
   protokoll.py         Monitoring-Protokoll und Statistik
   evaluation.py        Bewertung gegen das Testset
   api.py               FastAPI
 ui/                    Streamlit (Chat, pages/2_Monitoring.py), Dockerfile
-scripts/               check_setup, download_docs, ingest, ask, evaluate, demo_traffic
+scripts/               check_setup, download_docs, ingest, ask, evaluate, demo_traffic,
+                       ingest_testbestand (E2E), export_qase (Testmanagement)
 eval/                  Testset, Bericht, Ergebnisse aller Läufe
-tests/                 pytest
-.github/workflows/     CI/CD
+tests/                 pytest: Unit- und Integrationstests
+tests/e2e/             Playwright: Smoke-Test, TC-01 bis TC-07, fester Testbestand
+docs/testfaelle/       Testfälle (YAML) und Importdatei für Qase
+docs/                  Testmanagement, exploratives Testprotokoll, Screenshots
+.github/workflows/     CI/CD (ci.yml) und E2E gegen das echte Modell (manuell)
 ```
 
 ## Datenquellen
@@ -295,6 +403,7 @@ klassifiziert und enthält Kontaktdaten einer Mitarbeiterin.
 - Fristenrechner: nur Tage und Wochen nach § 11 VRG; keine Monatsfristen, keine lokalen Feiertage, kein Fristenstillstand.
 - Keine Anmeldung oder Rollen; Rate-Limit gilt pro API-Prozess.
 - Antwortzeit mit Agent 5–20 Sekunden; Antworten werden nicht gestreamt.
+- E2E-Tests im Testmodus prüfen das System um das Modell, nicht die Antwortqualität; der Lauf gegen das echte Modell wird von Hand gestartet. Der Testbestand umfasst nur 5 Seiten aus 3 Dokumenten.
 - Das Sprachmodell läuft bei Anthropic (USA): Personendaten werden zwar vorher entfernt, die Dokumentauszüge verlassen aber die Schweiz.
 
 **Nächste Schritte**
@@ -305,10 +414,12 @@ klassifiziert und enthält Kontaktdaten einer Mitarbeiterin.
 4. Quellen automatisch auf neue Versionen prüfen (Prüfsumme und Stand im Download-Skript, regelmässig in der CI).
 5. Betrieb mit Anmeldung (SSO) und auf Infrastruktur in der Schweiz; Prüfung eines in der Schweiz oder lokal betriebenen Sprachmodells.
 6. Antworten streamen, damit die erste Zeile nach etwa einer Sekunde erscheint.
+7. Testresultate aus der Pipeline automatisch nach Qase übertragen (`qase-pytest`, API-Token als Secret).
 
 ## Entwicklung
 
-Entstanden in zehn Meilensteinen, je mit eigenem Commit. Entwickelt mit Unterstützung von
+Entstanden in zehn Meilensteinen, je mit eigenem Commit; danach in fünf weiteren Meilensteinen
+um E2E-Tests, CI-Integration und Testmanagement erweitert. Entwickelt mit Unterstützung von
 Claude Code; die Arbeitsregeln dafür stehen in [`CLAUDE.md`](CLAUDE.md).
 
 ## Lizenz
